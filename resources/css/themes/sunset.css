@@ -1,0 +1,10 @@
+@import "../app.css";
+@import "./base.css";
+
+.theme-sunset {
+  --site-page-bg: #fff8f1;
+  --site-text: #4a2b1a;
+  --site-header-bg: #ffffff;
+  --site-footer-bg: #3a1f1a;
+  --site-accent: #e76f51;
+}

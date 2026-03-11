@@ -1,0 +1,20 @@
+body {
+  background-color: var(--site-page-bg);
+  color: var(--site-text);
+}
+
+.theme-header {
+  background-color: var(--site-header-bg);
+}
+
+.theme-footer {
+  background-color: var(--site-footer-bg);
+}
+
+.theme-accent-btn {
+  background-color: var(--site-accent);
+}
+
+.theme-accent-btn:hover {
+  filter: brightness(0.9);
+}

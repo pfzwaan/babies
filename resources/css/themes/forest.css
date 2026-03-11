@@ -1,0 +1,10 @@
+@import "../app.css";
+@import "./base.css";
+
+.theme-forest {
+  --site-page-bg: #f6fbf7;
+  --site-text: #1f3a2c;
+  --site-header-bg: #ffffff;
+  --site-footer-bg: #173527;
+  --site-accent: #2f855a;
+}

@@ -1,0 +1,341 @@
+@import "tailwindcss";
+@config "../../tailwind.config.js";
+
+/* ─────────────────────────────────────────────────────────────
+   BASE LAYER - Global defaults
+   ───────────────────────────────────────────────────────────── */
+@layer base {
+  html {
+    @apply scroll-smooth;
+  }
+
+  body {
+    @apply bg-background text-body font-body antialiased;
+  }
+
+  /* Headings use Fredoka */
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-heading text-heading;
+  }
+
+  h1 { @apply text-h1; }
+  h2 { @apply text-h2; }
+  h3 { @apply text-h3; }
+  h4 { @apply text-h4; }
+  h5 { @apply text-h5; }
+  h6 { @apply text-h6; }
+
+
+  /* Form elements */
+  input, textarea, select {
+    @apply font-body;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   COMPONENTS LAYER - Reusable UI components
+   ───────────────────────────────────────────────────────────── */
+@layer components {
+  /* ========== BUTTONS ========== */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2
+           px-6 py-3 rounded-md
+           text-btn font-medium
+           transition-all duration-200
+           focus:outline-none focus:ring-2 focus:ring-offset-2;
+  }
+
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2
+           px-6 py-3 rounded-md
+           text-btn font-medium
+           transition-all duration-200
+           focus:outline-none focus:ring-2 focus:ring-offset-2
+           bg-primary text-white
+           hover:bg-primary-dark hover:shadow-btn-hover
+           focus:ring-primary;
+  }
+
+  .btn-accent {
+    @apply inline-flex items-center justify-center gap-2
+           px-6 py-3 rounded-md
+           text-btn font-medium
+           transition-all duration-200
+           focus:outline-none focus:ring-2 focus:ring-offset-2
+           bg-accent text-white
+           hover:bg-accent-dark hover:shadow-btn-hover
+           focus:ring-accent;
+  }
+
+  .btn-dark {
+    @apply inline-flex items-center justify-center gap-2
+           px-6 py-3 rounded-md
+           text-btn font-medium
+           transition-all duration-200
+           focus:outline-none focus:ring-2 focus:ring-offset-2
+           bg-dark text-white
+           hover:bg-dark-light hover:shadow-btn-hover
+           focus:ring-dark;
+  }
+
+  .btn-outline {
+    @apply inline-flex items-center justify-center gap-2
+           px-6 py-3 rounded-md
+           text-btn font-medium
+           transition-all duration-200
+           focus:outline-none focus:ring-2 focus:ring-offset-2
+           bg-transparent border-2 border-dark text-dark
+           hover:bg-dark hover:text-white
+           focus:ring-dark;
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2
+           px-6 py-3 rounded-md
+           text-btn font-medium
+           transition-all duration-200
+           focus:outline-none focus:ring-2 focus:ring-offset-2
+           bg-transparent text-body
+           hover:bg-border-light
+           focus:ring-border;
+  }
+
+  .btn-sm {
+    @apply px-4 py-2 text-btn-sm;
+  }
+
+  .btn-lg {
+    @apply px-8 py-4 text-body-lg;
+  }
+
+  /* ========== CARDS ========== */
+  .card {
+    @apply bg-surface rounded-lg shadow-card p-card;
+  }
+
+  .card-sm {
+    @apply bg-surface rounded-lg shadow-sm p-card-sm;
+  }
+
+  .card-interactive {
+    @apply bg-surface rounded-lg shadow-card p-card cursor-pointer
+           transition-all duration-200
+           hover:shadow-lg hover:-translate-y-1;
+  }
+
+  .card-bordered {
+    @apply bg-surface rounded-lg border border-border p-card;
+  }
+
+  /* ========== INPUTS ========== */
+  .input {
+    @apply w-full px-4 py-3
+           bg-surface border border-border rounded-md
+           text-body placeholder:text-muted
+           transition-all duration-fast
+           focus:border-primary focus:ring-2 focus:ring-primary-100 focus:outline-none;
+  }
+
+  .input-sm {
+    @apply w-full px-3 py-2
+           bg-surface border border-border rounded-md
+           text-body-sm placeholder:text-muted
+           transition-all duration-fast
+           focus:border-primary focus:ring-2 focus:ring-primary-100 focus:outline-none;
+  }
+
+  .input-lg {
+    @apply w-full px-5 py-4
+           bg-surface border border-border rounded-md
+           text-body-lg placeholder:text-muted
+           transition-all duration-fast
+           focus:border-primary focus:ring-2 focus:ring-primary-100 focus:outline-none;
+  }
+
+  /* ========== CONTAINERS ========== */
+  .container-narrow {
+    @apply max-w-narrow mx-auto px-4 sm:px-6;
+  }
+
+  .container-content {
+    @apply max-w-content mx-auto px-4 sm:px-6 lg:px-8;
+  }
+
+  .container-wide {
+    @apply max-w-wide mx-auto px-4 sm:px-6 lg:px-8;
+  }
+
+  /* ========== SECTIONS ========== */
+  .section {
+    @apply py-section;
+  }
+
+  .section-lg {
+    @apply py-section-lg;
+  }
+
+  /* ========== BADGES / TAGS ========== */
+  .badge {
+    @apply inline-flex items-center
+           px-3 py-1 rounded-full
+           text-caption font-medium;
+  }
+
+  .badge-primary {
+    @apply inline-flex items-center
+           px-3 py-1 rounded-full
+           text-caption font-medium
+           bg-primary-100 text-primary-dark;
+  }
+
+  .badge-accent {
+    @apply inline-flex items-center
+           px-3 py-1 rounded-full
+           text-caption font-medium
+           bg-accent-light/20 text-accent-dark;
+  }
+
+  .badge-dark {
+    @apply inline-flex items-center
+           px-3 py-1 rounded-full
+           text-caption font-medium
+           bg-dark text-white;
+  }
+
+  .badge-muted {
+    @apply inline-flex items-center
+           px-3 py-1 rounded-full
+           text-caption font-medium
+           bg-border-light text-muted;
+  }
+
+  /* ========== NAME TAGS (specific to this project) ========== */
+  .name-tag {
+    @apply inline-block px-4 py-2
+           bg-surface border border-border rounded-lg
+           text-body font-medium text-heading
+           transition-all duration-fast
+           hover:border-primary hover:bg-primary-50 hover:text-primary-dark;
+  }
+
+  /* ========== ALPHABET BLOCKS ========== */
+  .alphabet-block {
+    @apply w-12 h-12 flex items-center justify-center
+           rounded-md font-heading font-bold text-h5
+           transition-all duration-fast;
+  }
+
+  .alphabet-block-default {
+    @apply w-12 h-12 flex items-center justify-center
+           rounded-md font-heading font-bold text-h5
+           transition-all duration-fast
+           bg-border-light text-muted
+           hover:bg-primary hover:text-white;
+  }
+
+  .alphabet-block-active {
+    @apply w-12 h-12 flex items-center justify-center
+           rounded-md font-heading font-bold text-h5
+           transition-all duration-fast
+           bg-primary text-white;
+  }
+
+  /* ========== ALPHABET BUTTONS ========== */
+  .alphabet-btn {
+    @apply w-[56px] h-[56px]
+           rounded-[14px]
+           bg-white
+           font-[Fredoka] font-semibold
+           text-[24px] leading-none
+           text-[#2F3A4F]
+           flex items-center justify-center
+           transition;
+  }
+
+  /* ========== NAVIGATION ========== */
+  .nav-link {
+    @apply text-body font-medium
+           transition-colors duration-fast
+           hover:text-primary;
+  }
+
+  .nav-link-active {
+    @apply text-primary;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   UTILITIES LAYER - Custom utilities
+   ───────────────────────────────────────────────────────────── */
+@layer utilities {
+  /* Text balance for headings */
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  /* Gradient backgrounds */
+  .bg-gradient-primary {
+    @apply bg-gradient-to-br from-primary to-primary-dark;
+  }
+
+  .bg-gradient-dark {
+    @apply bg-gradient-to-br from-dark to-dark-darker;
+  }
+
+  /* Hide scrollbar but keep functionality */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Basic WYSIWYG rendering for blog content */
+  .blog-content h1,
+  .blog-content h2,
+  .blog-content h3,
+  .blog-content h4,
+  .blog-content h5,
+  .blog-content h6 {
+    margin-top: 1.5rem;
+    margin-bottom: 0.75rem;
+    color: #0f172a;
+  }
+
+  .blog-content p {
+    margin-bottom: 1rem;
+    line-height: 1.8;
+    color: #334155;
+  }
+
+  .blog-content ul,
+  .blog-content ol {
+    margin-bottom: 1rem;
+    padding-left: 1.5rem;
+  }
+
+  .blog-content ul {
+    list-style: disc;
+  }
+
+  .blog-content ol {
+    list-style: decimal;
+  }
+
+  .blog-content a {
+    color: #2563eb;
+    text-decoration: underline;
+  }
+
+  .blog-content blockquote {
+    margin-bottom: 1rem;
+    border-left: 4px solid #cbd5e1;
+    padding-left: 1rem;
+    color: #475569;
+    font-style: italic;
+  }
+}
+
+
+

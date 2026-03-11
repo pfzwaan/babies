@@ -1,0 +1,10 @@
+@import "../app.css";
+@import "./base.css";
+
+.theme-default {
+  --site-page-bg: #ffffff;
+  --site-text: #0f172a;
+  --site-header-bg: #ffffff;
+  --site-footer-bg: #1e293b;
+  --site-accent: #f2613f;
+}
