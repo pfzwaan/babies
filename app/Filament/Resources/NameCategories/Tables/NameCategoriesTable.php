@@ -2,10 +2,12 @@
 
 namespace App\Filament\Resources\NameCategories\Tables;
 
+use App\Models\Site;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 
 class NameCategoriesTable
@@ -18,12 +20,21 @@ class NameCategoriesTable
                     ->label('Name Category')
                     ->searchable()
                     ->sortable(),
+                TextColumn::make('site.name')
+                    ->label('Site')
+                    ->searchable()
+                    ->sortable(),
                 TextColumn::make('slug')
                     ->searchable()
                     ->sortable(),
                 TextColumn::make('updated_at')
                     ->dateTime()
                     ->sortable(),
+            ])
+            ->filters([
+                SelectFilter::make('site_id')
+                    ->label('Site')
+                    ->options(fn (): array => Site::query()->orderBy('name')->pluck('name', 'id')->all()),
             ])
             ->recordActions([
                 EditAction::make(),

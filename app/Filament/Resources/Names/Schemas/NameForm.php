@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Names\Schemas;
 
+use App\Models\NameCategory;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TagsInput;
 use Filament\Forms\Components\Textarea;
@@ -51,10 +52,15 @@ class NameForm
 
                                     Select::make('name_category_id')
                                         ->label('Name Category')
-                                        ->relationship('nameCategory', 'name')
+                                        ->options(fn (callable $get): array => NameCategory::query()
+                                            ->when($get('site_id'), fn ($query, $siteId) => $query->where('site_id', (int) $siteId))
+                                            ->orderBy('name')
+                                            ->pluck('name', 'id')
+                                            ->all())
                                         ->required()
                                         ->searchable()
-                                        ->preload(),
+                                        ->preload()
+                                        ->live(),
 
                                     TagsInput::make('tags')
                                         ->label('Tags')

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Http\Request;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
@@ -123,5 +124,59 @@ class Site extends Model
     public function names(): HasMany
     {
         return $this->hasMany(Name::class);
+    }
+
+    public static function resolveCurrent(): ?self
+    {
+        $request = app()->bound('request') ? request() : null;
+
+        return $request instanceof Request ? self::resolveFromRequest($request) : self::defaultSite();
+    }
+
+    public static function resolveFromRequest(Request $request): ?self
+    {
+        $requestHost = self::normalizeHost($request->getHost());
+        $sites = self::query()
+            ->where('is_active', true)
+            ->orderBy('id')
+            ->get();
+
+        $matched = $sites->first(function (self $site) use ($requestHost): bool {
+            $siteHost = self::normalizeHost($site->domain);
+
+            return $siteHost !== null && $siteHost === $requestHost;
+        });
+
+        return $matched ?? $sites->first();
+    }
+
+    public static function defaultSite(): ?self
+    {
+        return self::query()
+            ->where('is_active', true)
+            ->orderBy('id')
+            ->first();
+    }
+
+    private static function normalizeHost(?string $value): ?string
+    {
+        if (blank($value)) {
+            return null;
+        }
+
+        $host = Str::lower(trim((string) $value));
+
+        if (! Str::startsWith($host, ['http://', 'https://'])) {
+            $host = 'http://' . $host;
+        }
+
+        $parsedHost = parse_url($host, PHP_URL_HOST);
+        if (! is_string($parsedHost) || $parsedHost === '') {
+            return null;
+        }
+
+        return Str::startsWith($parsedHost, 'www.')
+            ? (string) Str::after($parsedHost, 'www.')
+            : $parsedHost;
     }
 }

@@ -1,4 +1,4 @@
-@php($nameCategories = \App\Models\NameCategory::query()->orderBy('name')->get(['id', 'name', 'slug']))
+@php($nameCategories = \App\Models\NameCategory::query()->forSite(\App\Models\Site::resolveCurrent()?->id)->orderBy('name')->get(['id', 'name', 'slug']))
 @php($selectedCategorySlug = $selectedCategorySlug ?? (string) request()->query('category', ''))
 @php($selectedGender = $selectedGender ?? (string) request()->query('gender', ''))
 @php($searchQuery = $searchQuery ?? (string) request()->query('q', ''))

@@ -1,6 +1,6 @@
 <!-- animal blocks -->
 @php
-    $availableCategorySlugs = \App\Models\NameCategory::query()->pluck('slug')->all();
+    $availableCategorySlugs = \App\Models\NameCategory::query()->forSite(\App\Models\Site::resolveCurrent()?->id)->pluck('slug')->all();
     $availableCategoryLookup = array_fill_keys($availableCategorySlugs, true);
     $resolveCategoryUrl = function (array $card, string $fallbackSlug) use ($availableCategoryLookup): string {
         $manualUrl = trim((string) ($card['url'] ?? ''));

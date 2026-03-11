@@ -1,6 +1,6 @@
 @php
-    $global = \App\Models\GlobalContent::singleton();
-    $headerNavigation = \App\Models\Navigation::publishedForLocation('header-menu');
+    $global = \App\Models\GlobalContent::singleton(($site ?? null)?->id);
+    $headerNavigation = \App\Models\Navigation::publishedForLocation('header-menu', ($site ?? null)?->id);
     $items = $headerNavigation?->resolvedItems() ?? [];
 
     if ($items === []) {
@@ -46,15 +46,15 @@
 
     <div class="lg:hidden">
         <div class="bg-white">
-            <div class="container mx-auto flex items-center justify-between px-4 py-4 md:px-6">
+            <div class="container mx-auto flex items-center justify-between px-4 py-3 md:px-6">
                 <a href="{{ url('/') }}"><img src="{{ asset('img/babies/logo.svg') }}" alt="Babynamengids" class="h-auto w-44 md:w-[220px]" /></a>
                 <div class="flex items-center gap-3">
                     <a href="{{ $ctaUrl }}" class="hidden h-11 rounded-full bg-[#FF7D97] px-5 text-sm font-semibold text-white sm:inline-flex sm:items-center">{{ $ctaLabel }}</a>
-                    <button id="mobile-menu-toggle" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="mobile-menu-panel" class="inline-flex h-11 w-11 items-center justify-center rounded-full border border-[#d7d7d7] bg-white text-[#2f2f2f]">
-                        <span class="relative flex h-4 w-5 flex-col items-center justify-between">
-                            <span id="mobile-menu-line-top" class="block h-[2px] w-5 rounded-full bg-[#2f2f2f] transition-all duration-200"></span>
-                            <span id="mobile-menu-line-middle" class="block h-[2px] w-5 rounded-full bg-[#2f2f2f] transition-all duration-200"></span>
-                            <span id="mobile-menu-line-bottom" class="block h-[2px] w-5 rounded-full bg-[#2f2f2f] transition-all duration-200"></span>
+                    <button id="mobile-menu-toggle" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="mobile-menu-panel" class="inline-flex h-12 w-12 items-center justify-center rounded-[16px] border border-[#E7E1D8] bg-[#FFF8EF] text-[#2f2f2f] shadow-[0_6px_18px_rgba(0,0,0,0.06)] transition-colors duration-200">
+                        <span class="relative flex h-[15px] w-[20px] flex-col items-center justify-between">
+                            <span id="mobile-menu-line-top" class="block h-[2.5px] w-[20px] rounded-full bg-[#2f2f2f] transition-all duration-200"></span>
+                            <span id="mobile-menu-line-middle" class="block h-[2.5px] w-[20px] rounded-full bg-[#2f2f2f] transition-all duration-200"></span>
+                            <span id="mobile-menu-line-bottom" class="block h-[2.5px] w-[20px] rounded-full bg-[#2f2f2f] transition-all duration-200"></span>
                         </span>
                     </button>
                 </div>
@@ -86,18 +86,18 @@
 
     var closeMenu = function () {
         panel.classList.add('hidden');
-        topLine.classList.remove('translate-y-[6px]', 'rotate-45');
+        topLine.classList.remove('translate-y-[6px]', 'rotate-45', 'w-[18px]');
         middleLine.classList.remove('opacity-0');
-        bottomLine.classList.remove('-translate-y-[6px]', '-rotate-45');
+        bottomLine.classList.remove('-translate-y-[6px]', '-rotate-45', 'w-[18px]');
         toggleButton.setAttribute('aria-label', 'Open menu');
         toggleButton.setAttribute('aria-expanded', 'false');
     };
 
     var openMenu = function () {
         panel.classList.remove('hidden');
-        topLine.classList.add('translate-y-[6px]', 'rotate-45');
+        topLine.classList.add('translate-y-[6px]', 'rotate-45', 'w-[18px]');
         middleLine.classList.add('opacity-0');
-        bottomLine.classList.add('-translate-y-[6px]', '-rotate-45');
+        bottomLine.classList.add('-translate-y-[6px]', '-rotate-45', 'w-[18px]');
         toggleButton.setAttribute('aria-label', 'Close menu');
         toggleButton.setAttribute('aria-expanded', 'true');
     };

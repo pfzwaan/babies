@@ -3,7 +3,9 @@
 namespace App\Filament\Pages;
 
 use App\Models\GlobalContent;
+use App\Models\Site;
 use BackedEnum;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Concerns\InteractsWithForms;
@@ -32,15 +34,12 @@ class ContactFormsSettings extends Page implements HasForms
     protected string $view = 'filament.pages.contact-forms-settings';
 
     public ?array $data = [];
+    public ?int $siteId = null;
 
     public function mount(): void
     {
-        $globalContent = GlobalContent::singleton();
-
-        $this->form->fill($globalContent->only([
-            'contact_forms_title',
-            'contact_forms_intro',
-        ]));
+        $this->siteId = Site::defaultSite()?->id;
+        $this->fillFormFromSite($this->siteId);
     }
 
     public function form(Schema $schema): Schema
@@ -48,6 +47,22 @@ class ContactFormsSettings extends Page implements HasForms
         return $schema
             ->statePath('data')
             ->components([
+                Section::make('Multisite')
+                    ->description('Selecteer voor welk site-record je de contactinstellingen wilt bewerken.')
+                    ->schema([
+                        Select::make('site_id')
+                            ->label('Site')
+                            ->options(fn (): array => Site::query()->orderBy('name')->pluck('name', 'id')->all())
+                            ->required()
+                            ->searchable()
+                            ->preload()
+                            ->live()
+                            ->afterStateUpdated(function ($state): void {
+                                $this->siteId = blank($state) ? null : (int) $state;
+                                $this->fillFormFromSite($this->siteId);
+                            }),
+                    ]),
+
                 Section::make('Contact Forms')
                     ->schema([
                         TextInput::make('contact_forms_title')
@@ -63,13 +78,31 @@ class ContactFormsSettings extends Page implements HasForms
 
     public function save(): void
     {
-        $globalContent = GlobalContent::singleton();
-        $globalContent->fill($this->form->getState());
+        $state = $this->form->getState();
+        $siteId = (int) ($state['site_id'] ?? $this->siteId ?? 0);
+        $globalContent = GlobalContent::singleton($siteId ?: null);
+
+        unset($state['site_id']);
+        $globalContent->fill($state);
+        $globalContent->site_id = $siteId ?: null;
         $globalContent->save();
 
         Notification::make()
             ->title('Contact forms settings updated')
             ->success()
             ->send();
+    }
+
+    private function fillFormFromSite(?int $siteId): void
+    {
+        $globalContent = GlobalContent::singleton($siteId);
+
+        $this->form->fill([
+            'site_id' => $siteId,
+            ...$globalContent->only([
+                'contact_forms_title',
+                'contact_forms_intro',
+            ]),
+        ]);
     }
 }

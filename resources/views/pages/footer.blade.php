@@ -1,6 +1,6 @@
 <!-- Main footer -->
 @php
-    $global = \App\Models\GlobalContent::singleton();
+    $global = \App\Models\GlobalContent::singleton(($site ?? null)?->id);
     $footerTitle1 = $global->footer_title_1 ?: 'Over Dierennamengids.nl';
     $footerContent1 = $global->footer_content_1 ?: '<p>Welkom op de website vol met dierennamen! Dierennamengids.nl is de meest complete website in Nederland voor wat betreft dierennamen. Of je nu zoekt naar namen voor een hond of konijn. Dierennamengids.nl heeft voor ieder wat wils!</p>';
     $footerTitle2 = $global->footer_title_2 ?: 'Menu';

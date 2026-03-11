@@ -20,8 +20,10 @@ class NameController extends Controller
     {
         $normalizedGender = $this->normalizeGender($request->query('gender'));
         $query = trim((string) $request->query('q'));
+        $siteId = $this->resolveSiteFromRequest($request)?->id;
 
         $category = NameCategory::query()
+            ->forSite($siteId)
             ->where('slug', (string) $request->query('category'))
             ->first();
 
@@ -70,6 +72,7 @@ class NameController extends Controller
         $siteId = $site?->id;
 
         $category = NameCategory::query()
+            ->forSite($siteId)
             ->where('slug', $nameCategory)
             ->first();
 
@@ -357,6 +360,7 @@ class NameController extends Controller
     private function sharedArchiveViewData(?int $siteId): array
     {
         $categories = NameCategory::query()
+            ->forSite($siteId)
             ->withCount([
                 'names as names_count' => fn ($query) => $this->applySiteScope($query, $siteId),
             ])

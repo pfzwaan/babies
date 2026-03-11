@@ -1,5 +1,5 @@
 @php
-    $global = \App\Models\GlobalContent::singleton();
+    $global = \App\Models\GlobalContent::singleton(($site ?? null)?->id);
 
     $footerTitle1 = $global->footer_title_1 ?: 'Over Babynamengids.nl';
     $footerContent1 = $global->footer_content_1 ?: '<p>Onze site biedt duidelijke en nuttige informatie over de betekenis, oorsprong en trends van babynamen.</p>';

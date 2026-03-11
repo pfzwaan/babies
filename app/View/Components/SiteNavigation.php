@@ -18,7 +18,7 @@ class SiteNavigation extends Component
     public function render(): View|Closure|string
     {
         return view('components.site-navigation', [
-            'navigation' => Navigation::publishedForLocation($this->location),
+            'navigation' => Navigation::publishedForLocation($this->location, Site::resolveCurrent()?->id),
         ]);
     }
 }

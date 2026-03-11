@@ -6,7 +6,7 @@
 @php($shapeImage = $data['shape_image'] ?? null)
 @php($backgroundImageUrl = $backgroundImage ? optional(\Awcodes\Curator\Models\Media::find($backgroundImage))->url : null)
 @php($shapeImageUrl = $shapeImage ? optional(\Awcodes\Curator\Models\Media::find($shapeImage))->url : null)
-@php($nameCategories = \App\Models\NameCategory::query()->orderBy('name')->get(['id', 'name', 'slug']))
+@php($nameCategories = \App\Models\NameCategory::query()->forSite(\App\Models\Site::resolveCurrent()?->id)->orderBy('name')->get(['id', 'name', 'slug']))
 @php($selectedCategory = (string) request()->query('category', ''))
 @php($selectedGender = (string) request()->query('gender', ''))
 @php($searchQuery = (string) request()->query('q', ''))

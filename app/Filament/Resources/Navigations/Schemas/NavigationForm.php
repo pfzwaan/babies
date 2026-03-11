@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Navigations\Schemas;
 
 use App\Models\NameCategory;
 use App\Models\Page;
+use App\Models\Site;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
@@ -38,10 +39,21 @@ class NavigationForm
                                     $set('location', Str::slug((string) $state, '-'));
                                 }),
 
+                            Select::make('site_id')
+                                ->label('Site')
+                                ->options(fn (): array => Site::query()->orderBy('name')->pluck('name', 'id')->all())
+                                ->required()
+                                ->searchable()
+                                ->preload()
+                                ->live(),
+
                             TextInput::make('location')
                                 ->required()
                                 ->maxLength(255)
-                                ->unique(ignoreRecord: true)
+                                ->unique(
+                                    ignoreRecord: true,
+                                    modifyRuleUsing: fn ($rule, Get $get) => $rule->where('site_id', $get('site_id'))
+                                )
                                 ->helperText('Key used in templates, e.g. header-menu or footer-menu.'),
 
                             Repeater::make('items')
@@ -118,7 +130,8 @@ class NavigationForm
 
             Select::make('page_id')
                 ->label('Page')
-                ->options(fn (): array => Page::query()
+                ->options(fn (Get $get): array => Page::query()
+                    ->when($get('../../site_id') ?: $get('site_id'), fn ($query, $siteId) => $query->where('site_id', (int) $siteId))
                     ->where('status', 'published')
                     ->orderBy('title')
                     ->pluck('title', 'id')
@@ -142,7 +155,8 @@ class NavigationForm
 
             Select::make('name_category_id')
                 ->label('Name Category')
-                ->options(fn (): array => NameCategory::query()
+                ->options(fn (Get $get): array => NameCategory::query()
+                    ->when($get('../../site_id') ?: $get('site_id'), fn ($query, $siteId) => $query->where('site_id', (int) $siteId))
                     ->orderBy('name')
                     ->pluck('name', 'id')
                     ->all())

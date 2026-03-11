@@ -11,7 +11,7 @@ class NameAiContentGenerator
 {
     public function generateForName(Name $name): array
     {
-        $settings = GlobalContent::singleton();
+        $settings = GlobalContent::singleton($name->site_id);
         $apiKey = trim((string) ($settings->name_ai_openai_api_key ?? ''));
         $targets = collect($settings->name_ai_targets ?? [])->map(fn ($item) => (string) $item)->all();
 

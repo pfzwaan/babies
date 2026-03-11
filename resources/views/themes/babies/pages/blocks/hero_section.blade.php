@@ -4,7 +4,7 @@
     $titleSuffix = $data['title_suffix'] ?? 'voor je baby';
     $subtitle = $data['subtitle'] ?? 'Ontdek populaire, moderne en unieke namen om inspiratie op te doen en de ideale naam voor je kleintje te kiezen.';
 
-    $nameCategories = \App\Models\NameCategory::query()->orderBy('name')->get(['id', 'name', 'slug']);
+    $nameCategories = \App\Models\NameCategory::query()->forSite(\App\Models\Site::resolveCurrent()?->id)->orderBy('name')->get(['id', 'name', 'slug']);
     $selectedCategory = (string) request()->query('category', '');
     $selectedGender = (string) request()->query('gender', '');
     $searchQuery = (string) request()->query('q', '');

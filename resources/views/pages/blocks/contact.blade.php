@@ -1,5 +1,5 @@
 @php
-    $global = \App\Models\GlobalContent::singleton();
+    $global = \App\Models\GlobalContent::singleton(($site ?? null)?->id);
 
     $title = $data['title'] ?? null;
     $intro = $data['intro'] ?? null;

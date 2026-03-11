@@ -4,6 +4,7 @@ namespace App\Filament\Pages;
 
 use App\Models\GlobalContent;
 use App\Models\Navigation;
+use App\Models\Site;
 use BackedEnum;
 use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\RichEditor;
@@ -34,38 +35,13 @@ class GlobalContents extends Page implements HasForms
     protected string $view = 'filament.pages.global-contents';
 
     public ?array $data = [];
+    public ?int $siteId = null;
 
     public function mount(): void
     {
-        $globalContent = GlobalContent::singleton();
+        $this->siteId = Site::defaultSite()?->id;
 
-        $this->form->fill($globalContent->only([
-            'header_cta_label',
-            'header_cta_url',
-            'footer_title_1',
-            'footer_content_1',
-            'footer_title_2',
-            'footer_navigation_2_id',
-            'footer_content_2',
-            'footer_title_3',
-            'footer_navigation_3_id',
-            'footer_content_3',
-            'footer_title_4',
-            'footer_content_4',
-            'footer_social_label',
-            'footer_social_facebook_url',
-            'footer_social_instagram_url',
-            'footer_social_tiktok_url',
-            'footer_social_youtube_url',
-            'name_ai_openai_api_key',
-            'name_ai_model',
-            'name_ai_prompt',
-            'name_ai_keywords',
-            'name_ai_temperature',
-            'name_ai_max_tokens',
-            'name_ai_targets',
-            'name_ai_names_mode',
-        ]));
+        $this->fillFormFromSite($this->siteId);
     }
 
     public function form(Schema $schema): Schema
@@ -73,6 +49,22 @@ class GlobalContents extends Page implements HasForms
         return $schema
             ->statePath('data')
             ->components([
+                Section::make('Multisite')
+                    ->description('Selecteer voor welk site-record je de globale inhoud wilt bewerken.')
+                    ->schema([
+                        Select::make('site_id')
+                            ->label('Site')
+                            ->options(fn (): array => Site::query()->orderBy('name')->pluck('name', 'id')->all())
+                            ->required()
+                            ->searchable()
+                            ->preload()
+                            ->live()
+                            ->afterStateUpdated(function ($state): void {
+                                $this->siteId = blank($state) ? null : (int) $state;
+                                $this->fillFormFromSite($this->siteId);
+                            }),
+                    ]),
+
                 Section::make('Header')
                     ->schema([
                         TextInput::make('header_cta_label')
@@ -98,7 +90,8 @@ class GlobalContents extends Page implements HasForms
                             ->maxLength(255),
                         Select::make('footer_navigation_2_id')
                             ->label('Footer Navigation 2')
-                            ->options(fn (): array => Navigation::query()
+                            ->options(fn (callable $get): array => Navigation::query()
+                                ->when($get('site_id'), fn ($query, $siteId) => $query->where('site_id', (int) $siteId))
                                 ->orderByDesc('status')
                                 ->orderBy('name')
                                 ->get()
@@ -119,7 +112,8 @@ class GlobalContents extends Page implements HasForms
                             ->maxLength(255),
                         Select::make('footer_navigation_3_id')
                             ->label('Footer Navigation 3')
-                            ->options(fn (): array => Navigation::query()
+                            ->options(fn (callable $get): array => Navigation::query()
+                                ->when($get('site_id'), fn ($query, $siteId) => $query->where('site_id', (int) $siteId))
                                 ->orderByDesc('status')
                                 ->orderBy('name')
                                 ->get()
@@ -224,16 +218,54 @@ class GlobalContents extends Page implements HasForms
 
     public function save(): void
     {
-        $globalContent = GlobalContent::singleton();
-
         $state = $this->form->getState();
+        $siteId = (int) ($state['site_id'] ?? $this->siteId ?? 0);
+        $globalContent = GlobalContent::singleton($siteId ?: null);
 
+        unset($state['site_id']);
         $globalContent->fill($state);
+        $globalContent->site_id = $siteId ?: null;
         $globalContent->save();
 
         Notification::make()
             ->title('Global contents updated')
             ->success()
             ->send();
+    }
+
+    private function fillFormFromSite(?int $siteId): void
+    {
+        $globalContent = GlobalContent::singleton($siteId);
+
+        $this->form->fill([
+            'site_id' => $siteId,
+            ...$globalContent->only([
+                'header_cta_label',
+                'header_cta_url',
+                'footer_title_1',
+                'footer_content_1',
+                'footer_title_2',
+                'footer_navigation_2_id',
+                'footer_content_2',
+                'footer_title_3',
+                'footer_navigation_3_id',
+                'footer_content_3',
+                'footer_title_4',
+                'footer_content_4',
+                'footer_social_label',
+                'footer_social_facebook_url',
+                'footer_social_instagram_url',
+                'footer_social_tiktok_url',
+                'footer_social_youtube_url',
+                'name_ai_openai_api_key',
+                'name_ai_model',
+                'name_ai_prompt',
+                'name_ai_keywords',
+                'name_ai_temperature',
+                'name_ai_max_tokens',
+                'name_ai_targets',
+                'name_ai_names_mode',
+            ]),
+        ]);
     }
 }

@@ -3,11 +3,13 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Arr;
 
 class Navigation extends Model
 {
     protected $fillable = [
+        'site_id',
         'name',
         'location',
         'status',
@@ -17,13 +19,22 @@ class Navigation extends Model
     protected function casts(): array
     {
         return [
+            'site_id' => 'integer',
             'items' => 'array',
         ];
     }
 
-    public static function publishedForLocation(string $location): ?self
+    public function site(): BelongsTo
     {
+        return $this->belongsTo(Site::class);
+    }
+
+    public static function publishedForLocation(string $location, ?int $siteId = null): ?self
+    {
+        $resolvedSiteId = $siteId ?? Site::resolveCurrent()?->id;
+
         return self::query()
+            ->when($resolvedSiteId !== null, fn ($query) => $query->where('site_id', $resolvedSiteId))
             ->where('location', $location)
             ->where('status', 'published')
             ->first();
@@ -73,11 +84,13 @@ class Navigation extends Model
 
         $pages = Page::query()
             ->whereIn('id', $pageIds)
+            ->when($this->site_id !== null, fn ($query) => $query->where('site_id', $this->site_id))
             ->where('status', 'published')
             ->get(['id', 'title', 'slug'])
             ->keyBy('id');
 
         $nameCategories = NameCategory::query()
+            ->when($this->site_id !== null, fn ($query) => $query->where('site_id', $this->site_id))
             ->whereIn('id', $nameCategoryIds)
             ->get(['id', 'name', 'slug'])
             ->keyBy('id');

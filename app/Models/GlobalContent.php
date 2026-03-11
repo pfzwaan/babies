@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Crypt;
 class GlobalContent extends Model
 {
     protected $fillable = [
+        'site_id',
         'header_cta_label',
         'header_cta_url',
         'footer_title_1',
@@ -40,6 +41,7 @@ class GlobalContent extends Model
     ];
 
     protected $casts = [
+        'site_id' => 'integer',
         'footer_navigation_2_id' => 'integer',
         'footer_navigation_3_id' => 'integer',
         'name_ai_temperature' => 'float',
@@ -50,6 +52,11 @@ class GlobalContent extends Model
     public function footerNavigation2(): BelongsTo
     {
         return $this->belongsTo(Navigation::class, 'footer_navigation_2_id');
+    }
+
+    public function site(): BelongsTo
+    {
+        return $this->belongsTo(Site::class);
     }
 
     public function footerNavigation3(): BelongsTo
@@ -82,8 +89,13 @@ class GlobalContent extends Model
         $this->attributes['name_ai_openai_api_key'] = Crypt::encryptString((string) $value);
     }
 
-    public static function singleton(): self
+    public static function singleton(?int $siteId = null): self
     {
-        return static::query()->first() ?? static::query()->create();
+        $resolvedSiteId = $siteId ?? Site::resolveCurrent()?->id;
+
+        return static::query()
+            ->when($resolvedSiteId !== null, fn ($query) => $query->where('site_id', $resolvedSiteId))
+            ->first()
+            ?? static::query()->create(['site_id' => $resolvedSiteId]);
     }
 }

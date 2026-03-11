@@ -1,5 +1,5 @@
 @php
-    $headerNavigation = \App\Models\Navigation::publishedForLocation('header-menu');
+    $headerNavigation = \App\Models\Navigation::publishedForLocation('header-menu', ($site ?? null)?->id);
     $headerItems = $headerNavigation?->resolvedItems() ?? [];
 @endphp
 

@@ -92,7 +92,11 @@ class NamesTable
                                 ->required(),
                             Select::make('name_category_id')
                                 ->label('Category for new names')
-                                ->options(fn () => NameCategory::query()->orderBy('name')->pluck('name', 'id')->all())
+                                ->options(fn (callable $get) => NameCategory::query()
+                                    ->when($get('site_id'), fn ($query, $siteId) => $query->where('site_id', (int) $siteId))
+                                    ->orderBy('name')
+                                    ->pluck('name', 'id')
+                                    ->all())
                                 ->searchable()
                                 ->required(fn (callable $get): bool => $get('operation') === 'create_or_update')
                                 ->visible(fn (callable $get): bool => $get('operation') === 'create_or_update'),
@@ -144,6 +148,16 @@ class NamesTable
                                     Notification::make()
                                         ->title('Site is required')
                                         ->body('Selecteer een site om nieuwe names aan te maken.')
+                                        ->danger()
+                                        ->send();
+
+                                    return;
+                                }
+
+                                if ($category && (int) $category->site_id !== (int) $site->id) {
+                                    Notification::make()
+                                        ->title('Category does not belong to selected site')
+                                        ->body('Kies een category die hoort bij het geselecteerde site.')
                                         ->danger()
                                         ->send();
 

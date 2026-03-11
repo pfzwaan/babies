@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Navigations\Tables;
 
+use App\Models\Site;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -16,6 +17,10 @@ class NavigationsTable
         return $table
             ->columns([
                 TextColumn::make('name')
+                    ->searchable()
+                    ->sortable(),
+                TextColumn::make('site.name')
+                    ->label('Site')
                     ->searchable()
                     ->sortable(),
                 TextColumn::make('location')
@@ -35,6 +40,9 @@ class NavigationsTable
                         'draft' => 'Draft',
                         'published' => 'Published',
                     ]),
+                SelectFilter::make('site_id')
+                    ->label('Site')
+                    ->options(fn (): array => Site::query()->orderBy('name')->pluck('name', 'id')->all()),
             ])
             ->recordActions([
                 EditAction::make(),

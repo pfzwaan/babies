@@ -1,5 +1,6 @@
 @php
     $defaultCategory = \App\Models\NameCategory::query()
+        ->forSite(\App\Models\Site::resolveCurrent()?->id)
         ->orderByRaw("slug = 'hondennamen' desc")
         ->orderBy('name')
         ->first(['id', 'slug']);
