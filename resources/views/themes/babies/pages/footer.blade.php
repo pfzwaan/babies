@@ -1,5 +1,6 @@
 @php
     $global = \App\Models\GlobalContent::singleton(($site ?? null)?->id);
+    $isBabyNamesSite = (($site ?? null)?->id) === 2;
 
     $footerTitle1 = $global->footer_title_1 ?: 'Over Babynamengids.nl';
     $footerContent1 = $global->footer_content_1 ?: '<p>Onze site biedt duidelijke en nuttige informatie over de betekenis, oorsprong en trends van babynamen.</p>';
@@ -27,6 +28,37 @@
     $footerSocialLabel = $global->footer_social_label ?: 'Volg ons via:';
     $facebookUrl = $global->footer_social_facebook_url;
     $instagramUrl = $global->footer_social_instagram_url;
+
+    $specialNamesLinks = '
+        <ul>
+            <li>&rsaquo; <a href="/jongensnamen/stoere">Stoere namen</a></li>
+            <li>&rsaquo; <a href="/jongensnamen/korte">Korte namen</a></li>
+            <li>&rsaquo; <a href="/jongensnamen/unieke">Unieke namen</a></li>
+            <li>&rsaquo; <a href="/jongensnamen/ouderwetse">Ouderwetse namen</a></li>
+            <li>&rsaquo; <a href="/jongensnamen/ouderwetse">Ouderwetse jongensnamen</a></li>
+            <li>&rsaquo; <a href="/meisjesnamen/ouderwetse">Ouderwetse meisjesnamen</a></li>
+            <li>&rsaquo; <a href="/jongensnamen/klassieke">Klassieke namen</a></li>
+            <li>&rsaquo; <a href="/jongensnamen/bijzondere">Bijzondere namen</a></li>
+            <li>&rsaquo; <a href="/jongensnamen/betekenis-namen">Betekenis namen</a></li>
+        </ul>';
+
+    $countryLinks = '
+        <ul>
+            <li>&rsaquo; <a href="/jongensnamen/belgische">Belgische jongensnamen</a></li>
+            <li>&rsaquo; <a href="/jongensnamen/friese">Friese jongensnamen</a></li>
+            <li>&rsaquo; <a href="/jongensnamen/franse">Franse jongensnamen</a></li>
+            <li>&rsaquo; <a href="/jongensnamen/italiaanse">Italiaanse jongensnamen</a></li>
+            <li>&rsaquo; <a href="/jongensnamen/spaanse">Spaanse jongensnamen</a></li>
+            <li>&rsaquo; <a href="/jongensnamen/engelse">Engelse jongensnamen</a></li>
+            <li>&rsaquo; <a href="/jongensnamen/afrikaanse">Afrikaanse jongensnamen</a></li>
+            <li>&rsaquo; <a href="/jongensnamen/griekse">Griekse jongensnamen</a></li>
+            <li>&rsaquo; <a href="/jongensnamen/islamitische">Islamitische jongensnamen</a></li>
+        </ul>';
+
+    if ($isBabyNamesSite) {
+        $footerContent2 .= $specialNamesLinks;
+        $footerContent3 = $countryLinks;
+    }
 @endphp
 
 <footer class="relative bg-[#F9E3BF]">
