@@ -17,9 +17,16 @@
     for ($i = 0; $i < 4; $i++) {
         $cards[$i] = array_merge($defaults[$i], data_get($data, 'cards.' . $i, []));
         $url = trim((string) ($cards[$i]['url'] ?? ''));
-                $cards[$i]['url'] = ($url !== '' && $url !== '#') ? $url : route('names.archive');
-                $cards[$i]['style'] = $palette[$i];
-            }
+        $normalizedTitle = \Illuminate\Support\Str::lower(trim((string) ($cards[$i]['title'] ?? '')));
+
+        $cards[$i]['url'] = match ($normalizedTitle) {
+            'jongensnamen' => route('names.category', ['nameCategory' => 'jongensnamen']),
+            'meisjesnamen' => route('names.category', ['nameCategory' => 'meisjesnamen']),
+            default => (($url !== '' && $url !== '#') ? $url : route('names.archive')),
+        };
+
+        $cards[$i]['style'] = $palette[$i];
+    }
 @endphp
 
 <section class="mx-auto w-full max-w-[1598px] px-4 py-14 md:px-8">

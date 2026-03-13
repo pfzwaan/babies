@@ -7,6 +7,7 @@ use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -713,3 +714,173 @@ Artisan::command('names:repair-babies-question-marks', function () {
 
     return 0;
 })->purpose('Corrige nombres con ? de Babies usando reemplazos exactos y exporta el resto para revision');
+
+Artisan::command('names:import-babynamengids {--site=2} {--category=jongensnamen} {--path=jongensnamen} {--gender=male} {--lang=nl} {--letters=abcdefghijklmnopqrstuvwxyz}', function () {
+    $siteId = (int) $this->option('site');
+    $categorySlug = Str::lower(trim((string) $this->option('category')));
+    $path = Str::lower(trim((string) $this->option('path')));
+    $gender = Str::lower(trim((string) $this->option('gender')));
+    $lang = Str::lower(trim((string) $this->option('lang')));
+    $letters = collect(str_split(Str::lower((string) $this->option('letters'))))
+        ->filter(fn (string $letter) => preg_match('/^[a-z]$/', $letter) === 1)
+        ->values()
+        ->all();
+
+    if ($siteId < 1) {
+        $this->error('El site debe ser un entero positivo.');
+
+        return 1;
+    }
+
+    if ($letters === []) {
+        $this->error('No se proporcionaron letras validas para importar.');
+
+        return 1;
+    }
+
+    if ($path === '') {
+        $this->error('El path no puede estar vacio.');
+
+        return 1;
+    }
+
+    if (! in_array($gender, ['male', 'female'], true)) {
+        $this->error("El gender debe ser 'male' o 'female'.");
+
+        return 1;
+    }
+
+    if (! DB::table('sites')->where('id', $siteId)->exists()) {
+        $this->error("No existe el site_id={$siteId}.");
+
+        return 1;
+    }
+
+    $category = DB::table('name_categories')
+        ->select('id', 'site_id', 'name', 'slug')
+        ->where('site_id', $siteId)
+        ->where('slug', $categorySlug)
+        ->first();
+
+    if (! $category) {
+        $this->error("No existe la categoria '{$categorySlug}' para site_id={$siteId}.");
+
+        return 1;
+    }
+
+    $existingKeys = DB::table('names')
+        ->where('site_id', $siteId)
+        ->where('name_category_id', $category->id)
+        ->where('gender', $gender)
+        ->where('lang', $lang)
+        ->pluck('title')
+        ->mapWithKeys(fn ($title) => [Str::lower(trim((string) $title)) => true])
+        ->all();
+
+    $usedSlugs = DB::table('names')
+        ->whereNotNull('slug')
+        ->pluck('slug')
+        ->flip()
+        ->all();
+
+    $makeSlug = function (string $title) use (&$usedSlugs): string {
+        $base = Str::slug($title);
+        $base = $base !== '' ? $base : 'name';
+        $slug = $base;
+        $counter = 2;
+
+        while (isset($usedSlugs[$slug])) {
+            $slug = "{$base}-{$counter}";
+            $counter++;
+        }
+
+        $usedSlugs[$slug] = true;
+
+        return $slug;
+    };
+
+    $normalizeTitle = function (string $value): string {
+        $value = html_entity_decode($value, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $value = strip_tags($value);
+        $value = preg_replace('/\s+/u', ' ', trim($value)) ?? trim($value);
+
+        return $value;
+    };
+
+    $extractTitles = function (string $html) use ($normalizeTitle): array {
+        if (! preg_match('/<div id="letterblok".*?<\/div>\s*<table[^>]*>(.*?)<\/table>/si', $html, $matches)) {
+            return [];
+        }
+
+        preg_match_all('/<td\b[^>]*>(.*?)<\/td>/si', $matches[1], $cellMatches);
+
+        return collect($cellMatches[1] ?? [])
+            ->map(fn ($cell) => $normalizeTitle((string) $cell))
+            ->filter()
+            ->values()
+            ->all();
+    };
+
+    $client = Http::timeout(30)
+        ->retry(2, 500)
+        ->withHeaders([
+            'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0 Safari/537.36',
+            'Accept-Language' => 'nl-NL,nl;q=0.9,en;q=0.8',
+        ]);
+
+    $totalInserted = 0;
+
+    foreach ($letters as $letter) {
+        $url = "https://babynamengids.nl/{$path}/{$letter}/";
+        $response = $client->get($url);
+
+        if (! $response->successful()) {
+            $this->warn("{$letter}: fallo HTTP {$response->status()} en {$url}");
+            continue;
+        }
+
+        $titles = $extractTitles($response->body());
+
+        if ($titles === []) {
+            $this->warn("{$letter}: no se encontraron nombres en {$url}");
+            continue;
+        }
+
+        $batch = [];
+        $seenInLetter = [];
+
+        foreach ($titles as $title) {
+            $identityKey = Str::lower($title);
+
+            if (isset($existingKeys[$identityKey]) || isset($seenInLetter[$identityKey])) {
+                continue;
+            }
+
+            $seenInLetter[$identityKey] = true;
+            $existingKeys[$identityKey] = true;
+
+            $batch[] = [
+                'site_id' => $siteId,
+                'lang' => $lang,
+                'title' => $title,
+                'slug' => $makeSlug($title),
+                'gender' => $gender,
+                'name_category_id' => $category->id,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ];
+        }
+
+        if ($batch !== []) {
+            DB::table('names')->insert($batch);
+        }
+
+        $insertedForLetter = count($batch);
+        $totalInserted += $insertedForLetter;
+        $this->line("{$letter}: {$insertedForLetter} importados");
+    }
+
+    $this->info("Importacion completada. Total insertados: {$totalInserted}");
+
+    return 0;
+})->purpose('Importa nombres por letra desde babynamengids.nl hacia un site/categoria especificos');
