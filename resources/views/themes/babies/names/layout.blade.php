@@ -13,7 +13,7 @@
 @include('themes.babies.pages.header')
 
 <main>
-    <section class="relative overflow-hidden bg-[#E0EEFE]">
+    <section class="relative overflow-hidden bg-[#E0EEFE] lg:-mt-[30px]">
         <div
             aria-hidden="true"
             class="pointer-events-none absolute inset-0 bg-[#E0EEFE] bg-cover bg-center bg-no-repeat"
@@ -23,18 +23,12 @@
             <h1 class="mx-auto max-w-[1100px] text-center text-[38px] font-bold leading-[1.02] text-[#353535] sm:text-[48px] lg:text-[64px]" style="font-family:Outfit,sans-serif;">De allerleukste jongensnaam kiezen</h1>
             <p class="mx-auto mt-6 max-w-[930px] text-center text-[18px] leading-[1.7] text-[#4E4B46] lg:text-[21px]">Zoek tussen duizenden babynamen met betekenis en achtergrondinformatie.</p>
 
-            <form action="{{ route('names.search') }}" method="GET" class="mx-auto mt-9 grid w-full max-w-[1125px] gap-3 rounded-[18px] bg-white p-3 md:grid-cols-[220px_220px_minmax(0,1fr)_170px] md:p-4">
+            <form action="{{ route('names.search') }}" method="GET" class="mx-auto mt-9 grid w-full max-w-[1125px] gap-3 rounded-[18px] bg-white p-3 md:grid-cols-[220px_minmax(0,1fr)_170px] md:p-4">
                 <select name="category" class="h-[52px] rounded-[10px] border border-[#D9D9D9] px-4 text-[15px] text-[#565656]">
                     <option value="">Alle categorieen</option>
                     @foreach($categories as $category)
                         <option value="{{ $category->slug }}">{{ $category->name }}</option>
                     @endforeach
-                </select>
-
-                <select name="gender" class="h-[52px] rounded-[10px] border border-[#D9D9D9] px-4 text-[15px] text-[#565656]">
-                    <option value="">Alle geslachten</option>
-                    <option value="male">Jongensnaam</option>
-                    <option value="female">Meisjesnaam</option>
                 </select>
 
                 <input type="text" name="q" placeholder="Zoek naar namen" class="h-[52px] rounded-[10px] border border-[#D9D9D9] px-4 text-[15px] text-[#565656]" />

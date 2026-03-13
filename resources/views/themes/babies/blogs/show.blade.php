@@ -67,7 +67,7 @@
         }
     @endphp
 
-    <section class="relative overflow-hidden lg:h-[475px]">
+    <section class="relative overflow-hidden lg:-mt-[30px] lg:h-[475px]">
         <img src="{{ $resolveMedia($blog->thumbnail) ?: asset('img/babies/blog-hero-image.svg') }}" alt="" aria-hidden="true" class="absolute inset-0 h-full w-full object-cover" />
         <div class="absolute inset-0 bg-black/25"></div>
         <div class="relative container mx-auto flex h-[320px] items-center justify-center px-4 md:h-[420px] lg:h-[475px]">

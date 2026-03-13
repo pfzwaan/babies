@@ -38,7 +38,7 @@
     @php($relatedChunks = $relatedNames->chunk((int) max(1, ceil($relatedNames->count() / 2))))
     @php($relatedIndex = 1)
 
-    <section class="relative overflow-hidden bg-[#F7F1E8]">
+    <section class="relative overflow-hidden bg-[#F7F1E8] lg:-mt-[30px]">
         <div class="absolute inset-0 bg-black/10"></div>
         <img src="{{ asset('img/babies/single-hero-image.svg') }}" alt="" aria-hidden="true" class="absolute inset-0 h-full w-full object-cover" />
         <img src="{{ asset('img/babies/single-hero-layer.svg') }}" alt="" aria-hidden="true" class="absolute inset-0 h-full w-full object-cover opacity-80" />

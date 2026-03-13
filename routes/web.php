@@ -51,6 +51,24 @@ Route::post('/namen/{nameCategory}/{name}/comments', [NameController::class, 'st
 Route::get('/{nameCategory}', [NameController::class, 'categoryIndex'])
     ->where('nameCategory', '^(?!admin$)[A-Za-z0-9-]+$')
     ->name('names.category');
+Route::get('/{nameCategory}/{tagSlug}', [NameController::class, 'categoryBySpecialTag'])
+    ->where('nameCategory', '^(?!admin$)[A-Za-z0-9-]+$')
+    ->where('tagSlug', '(stoere|korte|unieke|ouderwetse|klassieke|bijzondere|betekenis-namen)')
+    ->name('names.category.tag.single');
+Route::get('/{nameCategory}/{tagSlug}/{letter}', [NameController::class, 'categoryBySpecialTagLetter'])
+    ->where('nameCategory', '^(?!admin$)[A-Za-z0-9-]+$')
+    ->where('tagSlug', '(stoere|korte|unieke|ouderwetse|klassieke|bijzondere|betekenis-namen)')
+    ->where('letter', '[A-Za-z]')
+    ->name('names.category.tag.single.letter');
+Route::get('/{nameCategory}/{languageSlug}', [NameController::class, 'categoryByLanguage'])
+    ->where('nameCategory', '^(?!admin$)[A-Za-z0-9-]+$')
+    ->where('languageSlug', '(belgische|friese|franse|italiaanse|spaanse|engelse|afrikaanse|griekse|islamitische)')
+    ->name('names.category.language');
+Route::get('/{nameCategory}/{languageSlug}/{letter}', [NameController::class, 'categoryByLanguageLetter'])
+    ->where('nameCategory', '^(?!admin$)[A-Za-z0-9-]+$')
+    ->where('languageSlug', '(belgische|friese|franse|italiaanse|spaanse|engelse|afrikaanse|griekse|islamitische)')
+    ->where('letter', '[A-Za-z]')
+    ->name('names.category.language.letter');
 Route::get('/{nameCategory}/{genderSlug}', [NameController::class, 'categoryByGender'])
     ->where('nameCategory', '^(?!admin$)[A-Za-z0-9-]+$')
     ->where('genderSlug', '(reu|rue|teef|teefje|mannelijk|vrouwelijk|male|female)')

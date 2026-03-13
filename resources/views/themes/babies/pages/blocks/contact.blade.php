@@ -8,7 +8,7 @@
     $intro = filled($intro) ? $intro : ($global->contact_forms_intro ?: 'Heb je een vraag over babynamen, suggesties voor onze content of wil je iets met ons delen? Stuur gerust een bericht. We proberen zo snel mogelijk te reageren.');
 @endphp
 
-<section class="relative overflow-hidden bg-[#FFF8EF] py-10 md:py-20">
+<section class="relative overflow-hidden bg-[#FFF8EF] py-10 md:py-20 lg:-mt-[30px]">
     <div class="container relative mx-auto px-4 md:px-8">
         <div class="mx-auto max-w-[1120px]">
             <div class="flex items-center justify-center gap-3 lg:gap-8">

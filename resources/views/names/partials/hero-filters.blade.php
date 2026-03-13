@@ -1,10 +1,9 @@
 @php($nameCategories = \App\Models\NameCategory::query()->forSite(\App\Models\Site::resolveCurrent()?->id)->orderBy('name')->get(['id', 'name', 'slug']))
 @php($selectedCategorySlug = $selectedCategorySlug ?? (string) request()->query('category', ''))
-@php($selectedGender = $selectedGender ?? (string) request()->query('gender', ''))
 @php($searchQuery = $searchQuery ?? (string) request()->query('q', ''))
 
 <div class="mt-8 w-full max-w-[1440px] rounded-[16px] bg-white px-[16px] py-[16px] font-sans shadow-lg md:mt-10 md:rounded-[24px] md:px-[24px] md:py-[20px]">
-    <div class="grid grid-cols-1 gap-[12px] sm:grid-cols-2 lg:grid-cols-4 md:gap-[16px]">
+    <div class="grid grid-cols-1 gap-[12px] sm:grid-cols-2 lg:grid-cols-3 md:gap-[16px]">
         <div class="text-left">
             <label class="mb-[8px] block text-[14px] font-semibold leading-[15px] text-[#111827] md:text-[18px]">Huisdiersoort:</label>
             <div class="relative">
@@ -17,24 +16,6 @@
                     @foreach($nameCategories as $category)
                         <option value="{{ $category->slug }}" @selected($selectedCategorySlug === $category->slug)>{{ $category->name }}</option>
                     @endforeach
-                </select>
-                <svg class="pointer-events-none absolute right-[12px] top-1/2 h-4 w-4 -translate-y-1/2 text-[#F2643D]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
-                </svg>
-            </div>
-        </div>
-
-        <div class="text-left">
-            <label class="mb-[8px] block text-[14px] font-semibold leading-[15px] text-[#111827] md:text-[18px]">Geslacht:</label>
-            <div class="relative">
-                <select
-                    name="gender"
-                    form="hero-filters-form"
-                    class="h-[44px] w-full appearance-none rounded-[8px] border border-[#E5E7EB] bg-white px-[12px] pr-[36px] text-[14px] font-normal text-[#111827]"
-                >
-                    <option value="">Alle</option>
-                    <option value="male" @selected($selectedGender === 'male')>Mannelijk</option>
-                    <option value="female" @selected($selectedGender === 'female')>Vrouwelijk</option>
                 </select>
                 <svg class="pointer-events-none absolute right-[12px] top-1/2 h-4 w-4 -translate-y-1/2 text-[#F2643D]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>

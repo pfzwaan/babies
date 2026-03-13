@@ -6,7 +6,6 @@
 
     $nameCategories = \App\Models\NameCategory::query()->forSite(\App\Models\Site::resolveCurrent()?->id)->orderBy('name')->get(['id', 'name', 'slug']);
     $selectedCategory = (string) request()->query('category', '');
-    $selectedGender = (string) request()->query('gender', '');
     $searchQuery = (string) request()->query('q', '');
 @endphp
 
@@ -23,7 +22,7 @@
         </div>
 
         <div class="mx-auto mt-10 w-full max-w-[1446px] rounded-[20px] bg-white px-4 py-6 md:px-8 md:py-8 lg:mt-9 lg:px-[45px] lg:py-[48px]">
-            <form method="GET" action="{{ route('names.search') }}" class="grid gap-5 lg:grid-cols-[260px_260px_540px_239px] lg:items-end lg:gap-[19px]">
+            <form method="GET" action="{{ route('names.search') }}" class="grid gap-5 lg:grid-cols-[260px_1fr_239px] lg:items-end lg:gap-[19px]">
                 <div class="grid gap-2">
                     <label class="text-[18px] font-semibold leading-[15px] text-[#393939]">Selecteer herkomst</label>
                     <div class="relative">
@@ -34,15 +33,6 @@
                             @endforeach
                         </select>
                     </div>
-                </div>
-
-                <div class="grid gap-2">
-                    <label class="text-[18px] font-semibold leading-[15px] text-[#393939]">Geslacht</label>
-                    <select name="gender" class="h-[60px] w-full rounded-[5px] border border-[#d7d7d7] px-[11px] text-left text-[18px] font-normal leading-[15px] text-[#565656]">
-                        <option value="">Alle</option>
-                        <option value="male" @selected($selectedGender === 'male')>Jongensnaam</option>
-                        <option value="female" @selected($selectedGender === 'female')>Meisjesnaam</option>
-                    </select>
                 </div>
 
                 <div class="grid gap-2">

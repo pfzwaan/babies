@@ -100,6 +100,141 @@ class NameController extends Controller
         return $this->renderCategoryIndex($nameCategory, $request, $normalizedGender, null, $siteId);
     }
 
+    public function categoryByLanguage(NameCategory $nameCategory, string $languageSlug, Request $request): View
+    {
+        $site = $this->resolveSiteFromRequest($request);
+        $siteId = $site?->id;
+
+        $activeLanguage = $this->normalizeLanguageFromSlug($languageSlug);
+        abort_if($activeLanguage === null, 404);
+
+        return $this->renderCategoryIndex(
+            $nameCategory,
+            $request,
+            $this->normalizeGender($request->query('gender')),
+            null,
+            $siteId,
+            $activeLanguage['code'],
+            $activeLanguage['slug'],
+            $activeLanguage['label']
+        );
+    }
+
+    public function categoryBySpecialTag(NameCategory $nameCategory, string $tagSlug, Request $request): View
+    {
+        $site = $this->resolveSiteFromRequest($request);
+        $siteId = $site?->id;
+
+        $activeTag = $this->normalizeSpecialTagFromSlug($tagSlug);
+        abort_if($activeTag === null, 404);
+
+        return $this->renderCategoryIndex(
+            $nameCategory,
+            $request,
+            $this->normalizeGender($request->query('gender')),
+            $activeTag['slug'],
+            $siteId,
+            null,
+            null,
+            null,
+            $activeTag['slug'],
+            $activeTag['label']
+        );
+    }
+
+    public function categoryByLanguageLetter(NameCategory $nameCategory, string $languageSlug, string $letter, Request $request): View
+    {
+        $site = $this->resolveSiteFromRequest($request);
+        $siteId = $site?->id;
+
+        $activeLanguage = $this->normalizeLanguageFromSlug($languageSlug);
+        abort_if($activeLanguage === null, 404);
+
+        $letter = strtoupper($letter);
+        abort_unless(preg_match('/^[A-Z]$/', $letter) === 1, 404);
+
+        $namesQuery = $nameCategory->names()
+            ->when($siteId, fn ($query) => $query->where('site_id', $siteId))
+            ->where('lang', $activeLanguage['code'])
+            ->when($this->normalizeGender($request->query('gender')), function ($query, $gender) {
+                $query->where('gender', $gender);
+            })
+            ->when(filled($request->query('q')), function ($query) use ($request) {
+                $query->where('title', 'like', '%' . trim((string) $request->query('q')) . '%');
+            })
+            ->orderBy('title');
+
+        $letterNames = (clone $namesQuery)
+            ->where('title', 'like', $letter . '%')
+            ->get(['id', 'title', 'slug']);
+
+        $allNames = $namesQuery->get(['id', 'title', 'slug']);
+
+        $namesToRender = $letterNames->isNotEmpty() ? $letterNames : $allNames;
+
+        return $this->resolveThemedView($request, 'names.category_letter', [
+            'nameCategory' => $nameCategory,
+            'letter' => $letter,
+            'letters' => range('A', 'Z'),
+            'namesToRender' => $namesToRender,
+            'activeGender' => $this->normalizeGender($request->query('gender')),
+            'activeLanguage' => $activeLanguage['code'],
+            'activeLanguageSlug' => $activeLanguage['slug'],
+            'activeLanguageLabel' => $activeLanguage['label'],
+            'activeQuery' => trim((string) $request->query('q')),
+        ] + $this->sharedArchiveViewData($siteId));
+    }
+
+    public function categoryBySpecialTagLetter(NameCategory $nameCategory, string $tagSlug, string $letter, Request $request): View
+    {
+        $site = $this->resolveSiteFromRequest($request);
+        $siteId = $site?->id;
+
+        $activeTag = $this->normalizeSpecialTagFromSlug($tagSlug);
+        abort_if($activeTag === null, 404);
+
+        $letter = strtoupper($letter);
+        abort_unless(preg_match('/^[A-Z]$/', $letter) === 1, 404);
+
+        $namesQuery = $nameCategory->names()
+            ->when($siteId, fn ($query) => $query->where('site_id', $siteId))
+            ->where(function ($tagQuery) use ($activeTag): void {
+                foreach ($this->expandTagCandidates($activeTag['slug']) as $candidate) {
+                    $tagQuery->orWhereJsonContains('tags', $candidate);
+                }
+            })
+            ->when($this->normalizeGender($request->query('gender')), function ($query, $gender) {
+                $query->where('gender', $gender);
+            })
+            ->when(filled($request->query('q')), function ($query) use ($request) {
+                $query->where('title', 'like', '%' . trim((string) $request->query('q')) . '%');
+            })
+            ->orderBy('title');
+
+        $letterNames = (clone $namesQuery)
+            ->where('title', 'like', $letter . '%')
+            ->get(['id', 'title', 'slug']);
+
+        $allNames = $namesQuery->get(['id', 'title', 'slug']);
+
+        $namesToRender = $letterNames->isNotEmpty() ? $letterNames : $allNames;
+
+        return $this->resolveThemedView($request, 'names.category_letter', [
+            'nameCategory' => $nameCategory,
+            'letter' => $letter,
+            'letters' => range('A', 'Z'),
+            'namesToRender' => $namesToRender,
+            'activeGender' => $this->normalizeGender($request->query('gender')),
+            'activeLanguage' => null,
+            'activeLanguageSlug' => null,
+            'activeLanguageLabel' => null,
+            'activeTag' => $activeTag['slug'],
+            'activeTagSlug' => $activeTag['slug'],
+            'activeTagLabel' => $activeTag['label'],
+            'activeQuery' => trim((string) $request->query('q')),
+        ] + $this->sharedArchiveViewData($siteId));
+    }
+
     public function categoryByTag(NameCategory $nameCategory, string $tagGroup, string $tag, Request $request): View
     {
         $site = $this->resolveSiteFromRequest($request);
@@ -124,6 +259,9 @@ class NameController extends Controller
 
         $namesQuery = $nameCategory->names()
             ->when($siteId, fn ($query) => $query->where('site_id', $siteId))
+            ->when($this->normalizeLanguageCode($request->query('lang')), function ($query, $lang) {
+                $query->where('lang', $lang);
+            })
             ->when($this->normalizeGender($request->query('gender')), function ($query, $gender) {
                 $query->where('gender', $gender);
             })
@@ -146,6 +284,9 @@ class NameController extends Controller
             'letters' => range('A', 'Z'),
             'namesToRender' => $namesToRender,
             'activeGender' => $this->normalizeGender($request->query('gender')),
+            'activeLanguage' => $this->normalizeLanguageCode($request->query('lang')),
+            'activeLanguageSlug' => $this->normalizeLanguageSlug($request->query('lang')),
+            'activeLanguageLabel' => $this->languageLabelFromValue($request->query('lang')),
             'activeQuery' => trim((string) $request->query('q')),
         ] + $this->sharedArchiveViewData($siteId));
     }
@@ -313,19 +454,131 @@ class NameController extends Controller
         return $gender === 'female' ? 'female' : 'male';
     }
 
+    private function normalizeLanguageFromSlug(string $languageSlug): ?array
+    {
+        $value = Str::lower(trim($languageSlug));
+
+        return match ($value) {
+            'belgische' => ['code' => 'be', 'slug' => 'belgische', 'label' => 'Belgische'],
+            'friese' => ['code' => 'frs', 'slug' => 'friese', 'label' => 'Friese'],
+            'franse' => ['code' => 'fr', 'slug' => 'franse', 'label' => 'Franse'],
+            'italiaanse' => ['code' => 'it', 'slug' => 'italiaanse', 'label' => 'Italiaanse'],
+            'spaanse' => ['code' => 'sp', 'slug' => 'spaanse', 'label' => 'Spaanse'],
+            'engelse' => ['code' => 'en', 'slug' => 'engelse', 'label' => 'Engelse'],
+            'afrikaanse' => ['code' => 'af', 'slug' => 'afrikaanse', 'label' => 'Afrikaanse'],
+            'griekse' => ['code' => 'gr', 'slug' => 'griekse', 'label' => 'Griekse'],
+            'islamitische' => ['code' => 'isl', 'slug' => 'islamitische', 'label' => 'Islamitische'],
+            default => null,
+        };
+    }
+
+    private function normalizeLanguageCode(mixed $language): ?string
+    {
+        $value = trim((string) $language);
+
+        if ($value === '') {
+            return null;
+        }
+
+        if (in_array($value, ['be', 'frs', 'fr', 'it', 'sp', 'en', 'af', 'gr', 'isl'], true)) {
+            return $value;
+        }
+
+        return $this->normalizeLanguageFromSlug($value)['code'] ?? null;
+    }
+
+    private function normalizeLanguageSlug(mixed $language): ?string
+    {
+        $value = trim((string) $language);
+
+        if ($value === '') {
+            return null;
+        }
+
+        if ($normalized = $this->normalizeLanguageFromSlug($value)) {
+            return $normalized['slug'];
+        }
+
+        return match ($value) {
+            'be' => 'belgische',
+            'frs' => 'friese',
+            'fr' => 'franse',
+            'it' => 'italiaanse',
+            'sp' => 'spaanse',
+            'en' => 'engelse',
+            'af' => 'afrikaanse',
+            'gr' => 'griekse',
+            'isl' => 'islamitische',
+            default => null,
+        };
+    }
+
+    private function languageLabelFromValue(mixed $language): ?string
+    {
+        $value = trim((string) $language);
+
+        if ($value === '') {
+            return null;
+        }
+
+        if ($normalized = $this->normalizeLanguageFromSlug($value)) {
+            return $normalized['label'];
+        }
+
+        return match ($value) {
+            'be' => 'Belgische',
+            'frs' => 'Friese',
+            'fr' => 'Franse',
+            'it' => 'Italiaanse',
+            'sp' => 'Spaanse',
+            'en' => 'Engelse',
+            'af' => 'Afrikaanse',
+            'gr' => 'Griekse',
+            'isl' => 'Islamitische',
+            default => null,
+        };
+    }
+
+    private function normalizeSpecialTagFromSlug(string $tagSlug): ?array
+    {
+        $value = Str::lower(trim($tagSlug));
+
+        return match ($value) {
+            'stoere' => ['slug' => 'stoere', 'label' => 'Stoere'],
+            'korte' => ['slug' => 'korte', 'label' => 'Korte'],
+            'unieke' => ['slug' => 'unieke', 'label' => 'Unieke'],
+            'ouderwetse' => ['slug' => 'ouderwetse', 'label' => 'Ouderwetse'],
+            'klassieke' => ['slug' => 'klassieke', 'label' => 'Klassieke'],
+            'bijzondere' => ['slug' => 'bijzondere', 'label' => 'Bijzondere'],
+            'betekenis-namen' => ['slug' => 'betekenis-namen', 'label' => 'Betekenis namen'],
+            default => null,
+        };
+    }
+
     private function renderCategoryIndex(
         NameCategory $category,
         Request $request,
         ?string $activeGender,
         ?string $tagSlug = null,
-        ?int $siteId = null
+        ?int $siteId = null,
+        ?string $activeLanguage = null,
+        ?string $activeLanguageSlug = null,
+        ?string $activeLanguageLabel = null,
+        ?string $activeTagSlug = null,
+        ?string $activeTagLabel = null
     ): View
     {
         $activeQuery = trim((string) $request->query('q'));
         $tagCandidates = $this->expandTagCandidates($tagSlug);
+        $activeLanguage ??= $this->normalizeLanguageCode($request->query('lang'));
+        $activeLanguageSlug ??= $this->normalizeLanguageSlug($request->query('lang'));
+        $activeLanguageLabel ??= $this->languageLabelFromValue($request->query('lang'));
 
         $namesQuery = $category->names()
             ->when($siteId, fn ($query) => $query->where('site_id', $siteId))
+            ->when($activeLanguage, function ($query, $lang) {
+                $query->where('lang', $lang);
+            })
             ->when($activeGender, function ($query, $gender) {
                 $query->where('gender', $gender);
             })
@@ -352,8 +605,13 @@ class NameController extends Controller
             'letters' => range('A', 'Z'),
             'namesToRender' => $namesToRender,
             'activeGender' => $activeGender,
+            'activeLanguage' => $activeLanguage,
+            'activeLanguageSlug' => $activeLanguageSlug,
+            'activeLanguageLabel' => $activeLanguageLabel,
             'activeQuery' => $activeQuery,
             'activeTag' => $tagSlug,
+            'activeTagSlug' => $activeTagSlug,
+            'activeTagLabel' => $activeTagLabel,
         ] + $this->sharedArchiveViewData($siteId));
     }
 

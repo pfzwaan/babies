@@ -11,7 +11,18 @@
     $footerContent3 = $global->footerNavigation3?->toFooterHtml() ?: ($global->footer_content_3 ?: '<ul><li>&gt; Meisjesnamen</li></ul>');
 
     $footerTitle4 = $global->footer_title_4 ?: 'Speciale namen';
-    $footerContent4 = $global->footer_content_4 ?: '<ul><li>&gt; Unieke namen</li><li>&gt; Klassieke namen</li></ul>';
+    $footerContent4 = $global->footer_content_4 ?: '
+        <ul>
+            <li>&rsaquo; <a href="/jongensnamen/stoere">Stoere namen</a></li>
+            <li>&rsaquo; <a href="/jongensnamen/korte">Korte namen</a></li>
+            <li>&rsaquo; <a href="/jongensnamen/unieke">Unieke namen</a></li>
+            <li>&rsaquo; <a href="/jongensnamen/ouderwetse">Ouderwetse namen</a></li>
+            <li>&rsaquo; <a href="/jongensnamen/ouderwetse">Ouderwetse jongensnamen</a></li>
+            <li>&rsaquo; <a href="/meisjesnamen/ouderwetse">Ouderwetse meisjesnamen</a></li>
+            <li>&rsaquo; <a href="/jongensnamen/klassieke">Klassieke namen</a></li>
+            <li>&rsaquo; <a href="/jongensnamen/bijzondere">Bijzondere namen</a></li>
+            <li>&rsaquo; <a href="/jongensnamen/betekenis-namen">Betekenis namen</a></li>
+        </ul>';
 
     $footerSocialLabel = $global->footer_social_label ?: 'Volg ons via:';
     $facebookUrl = $global->footer_social_facebook_url;
@@ -24,7 +35,7 @@
     </div>
 
     <div class="container mx-auto px-4 py-12 md:px-8 lg:py-[88px]">
-        <div class="grid gap-10 lg:grid-cols-[560px_273px_273px_273px] lg:gap-[59px]">
+        <div class="grid gap-10 lg:grid-cols-2 xl:grid-cols-[minmax(0,1.45fr)_repeat(3,minmax(0,1fr))] xl:gap-[40px]">
             <div>
                 <img src="{{ asset('img/babies/logo.svg') }}" alt="Babynamengids" class="h-auto w-[266px]" />
                 <div class="mt-8 text-[18px] font-light leading-[30px] text-black">

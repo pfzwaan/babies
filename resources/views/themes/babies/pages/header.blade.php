@@ -2,6 +2,8 @@
     $global = \App\Models\GlobalContent::singleton(($site ?? null)?->id);
     $headerNavigation = \App\Models\Navigation::publishedForLocation('header-menu', ($site ?? null)?->id);
     $items = $headerNavigation?->resolvedItems() ?? [];
+    $currentPath = '/' . ltrim(request()->path(), '/');
+    $currentPath = $currentPath === '/.' ? '/' : $currentPath;
 
     if ($items === []) {
         $items = [
@@ -12,9 +14,6 @@
             ['label' => 'Blog', 'url' => '/blog'],
         ];
     }
-
-    $ctaLabel = $global->header_cta_label ?: 'Inloggen';
-    $ctaUrl = $global->header_cta_url ?: '#';
 @endphp
 
 <header class="fixed top-0 z-50 w-full">
@@ -23,7 +22,7 @@
             <div class="container mx-auto grid h-full grid-cols-[1fr_auto_1fr] pt-[19px] px-6">
                 <div></div>
                 <a href="{{ url('/') }}"><img src="{{ asset('img/babies/logo.svg') }}" alt="Babynamengids" class="h-[71px] w-[266px]" /></a>
-                <a href="{{ $ctaUrl }}" class="mt-[6px] inline-flex h-[60px] w-[219px] items-center justify-center justify-self-end rounded-full bg-[#FF7D97] text-[19px] font-semibold leading-[15.6px] text-white">{{ $ctaLabel }}</a>
+                <div></div>
             </div>
         </div>
 
@@ -31,13 +30,22 @@
             <div class="h-full w-full" style="background-image:url('{{ asset('img/babies/menu-wave.svg') }}');background-repeat:repeat-x;background-position:top left;background-size:auto 64px;filter:drop-shadow(0 0px 2px rgba(0,0,0,0.1));"></div>
             <nav class="absolute inset-0 container mx-auto flex h-full items-start justify-center pt-[3px] text-center text-[18px] uppercase tracking-[1px] text-[#2f2f2f]" aria-label="Main navigation">
                 @foreach($items as $index => $item)
+                    @php
+                        $itemUrl = $item['url'] ?? '#';
+                        $parsedPath = is_string($itemUrl) ? parse_url($itemUrl, PHP_URL_PATH) : null;
+                        $itemPath = is_string($parsedPath) && $parsedPath !== '' ? $parsedPath : (is_string($itemUrl) ? $itemUrl : '#');
+                        $itemPath = str_starts_with($itemPath, '/') ? $itemPath : '/' . ltrim($itemPath, '/');
+                        $isActive = $itemPath === '/'
+                            ? $currentPath === '/'
+                            : ($currentPath === $itemPath || str_starts_with($currentPath, $itemPath . '/'));
+                    @endphp
                     @if($index > 0)
                         <span class="px-5 font-normal">&bull;</span>
                     @endif
                     <a
-                        href="{{ $item['url'] ?? '#' }}"
+                        href="{{ $itemUrl }}"
                         @if(! empty($item['open_in_new_tab'])) target="_blank" rel="noopener noreferrer" @endif
-                        class="{{ $index === 0 ? 'font-bold' : 'font-normal' }}"
+                        class="{{ $isActive ? 'font-bold' : 'font-normal' }}"
                     >{{ $item['label'] ?? '' }}</a>
                 @endforeach
             </nav>
@@ -48,8 +56,7 @@
         <div class="bg-white">
             <div class="container mx-auto flex items-center justify-between px-4 py-3 md:px-6">
                 <a href="{{ url('/') }}"><img src="{{ asset('img/babies/logo.svg') }}" alt="Babynamengids" class="h-auto w-44 md:w-[220px]" /></a>
-                <div class="flex items-center gap-3">
-                    <a href="{{ $ctaUrl }}" class="hidden h-11 rounded-full bg-[#FF7D97] px-5 text-sm font-semibold text-white sm:inline-flex sm:items-center">{{ $ctaLabel }}</a>
+                <div class="flex items-center">
                     <button id="mobile-menu-toggle" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="mobile-menu-panel" class="inline-flex h-12 w-12 items-center justify-center rounded-[16px] border border-[#E7E1D8] bg-[#FFF8EF] text-[#2f2f2f] shadow-[0_6px_18px_rgba(0,0,0,0.06)] transition-colors duration-200">
                         <span class="relative flex h-[15px] w-[20px] flex-col items-center justify-between">
                             <span id="mobile-menu-line-top" class="block h-[2.5px] w-[20px] rounded-full bg-[#2f2f2f] transition-all duration-200"></span>
@@ -66,9 +73,17 @@
         <nav id="mobile-menu-panel" class="hidden border-t border-[#efefef] bg-white shadow-[0_10px_28px_rgba(0,0,0,0.08)]" aria-label="Mobile menu">
             <div class="container mx-auto grid gap-1 px-4 py-4 md:px-6">
                 @foreach($items as $item)
-                    <a href="{{ $item['url'] ?? '#' }}" @if(! empty($item['open_in_new_tab'])) target="_blank" rel="noopener noreferrer" @endif class="rounded-xl px-4 py-3 text-sm font-semibold uppercase tracking-[0.8px] text-[#2f2f2f] hover:bg-[#E0EEFE]">{{ $item['label'] ?? '' }}</a>
+                    @php
+                        $itemUrl = $item['url'] ?? '#';
+                        $parsedPath = is_string($itemUrl) ? parse_url($itemUrl, PHP_URL_PATH) : null;
+                        $itemPath = is_string($parsedPath) && $parsedPath !== '' ? $parsedPath : (is_string($itemUrl) ? $itemUrl : '#');
+                        $itemPath = str_starts_with($itemPath, '/') ? $itemPath : '/' . ltrim($itemPath, '/');
+                        $isActive = $itemPath === '/'
+                            ? $currentPath === '/'
+                            : ($currentPath === $itemPath || str_starts_with($currentPath, $itemPath . '/'));
+                    @endphp
+                    <a href="{{ $itemUrl }}" @if(! empty($item['open_in_new_tab'])) target="_blank" rel="noopener noreferrer" @endif class="rounded-xl px-4 py-3 text-sm uppercase tracking-[0.8px] text-[#2f2f2f] hover:bg-[#E0EEFE] {{ $isActive ? 'font-bold' : 'font-semibold' }}">{{ $item['label'] ?? '' }}</a>
                 @endforeach
-                <a href="{{ $ctaUrl }}" class="mt-2 inline-flex h-11 items-center justify-center rounded-full bg-[#FF7D97] px-5 text-sm font-semibold text-white sm:hidden">{{ $ctaLabel }}</a>
             </div>
         </nav>
     </div>

@@ -884,3 +884,499 @@ Artisan::command('names:import-babynamengids {--site=2} {--category=jongensnamen
 
     return 0;
 })->purpose('Importa nombres por letra desde babynamengids.nl hacia un site/categoria especificos');
+
+Artisan::command('names:tag-babynamengids-meisjes-languages {--site=2} {--category=meisjesnamen} {--letters=abcdefghijklmnopqrstuvwxyz}', function () {
+    $siteId = (int) $this->option('site');
+    $categorySlug = Str::lower(trim((string) $this->option('category')));
+    $letters = collect(str_split(Str::lower((string) $this->option('letters'))))
+        ->filter(fn (string $letter) => preg_match('/^[a-z]$/', $letter) === 1)
+        ->values()
+        ->all();
+
+    $definitions = [
+        ['path' => 'belgische-meisjesnamen', 'lang' => 'be'],
+        ['path' => 'friese-meisjesnamen', 'lang' => 'frs'],
+        ['path' => 'franse-meisjesnamen', 'lang' => 'fr'],
+        ['path' => 'italiaanse-meisjesnamen', 'lang' => 'it'],
+        ['path' => 'spaanse-meisjesnamen', 'lang' => 'sp'],
+        ['path' => 'engelse-meisjesnamen', 'lang' => 'en'],
+        ['path' => 'afrikaanse-meisjesnamen', 'lang' => 'af'],
+        ['path' => 'griekse-meisjesnamen', 'lang' => 'gr'],
+        ['path' => 'islamitische-meisjesnamen', 'lang' => 'isl'],
+    ];
+
+    if (! DB::table('sites')->where('id', $siteId)->exists()) {
+        $this->error("No existe el site_id={$siteId}.");
+
+        return 1;
+    }
+
+    $category = DB::table('name_categories')
+        ->select('id', 'slug')
+        ->where('site_id', $siteId)
+        ->where('slug', $categorySlug)
+        ->first();
+
+    if (! $category) {
+        $this->error("No existe la categoria '{$categorySlug}' para site_id={$siteId}.");
+
+        return 1;
+    }
+
+    $normalizeTitle = function (string $value): string {
+        $value = html_entity_decode($value, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $value = strip_tags($value);
+        $value = preg_replace('/\s+/u', ' ', trim($value)) ?? trim($value);
+
+        return $value;
+    };
+
+    $extractTitles = function (string $html) use ($normalizeTitle): array {
+        if (! preg_match('/<div id="letterblok".*?<\/div>\s*<table[^>]*>(.*?)<\/table>/si', $html, $matches)) {
+            return [];
+        }
+
+        preg_match_all('/<td\b[^>]*>(.*?)<\/td>/si', $matches[1], $cellMatches);
+
+        return collect($cellMatches[1] ?? [])
+            ->map(fn ($cell) => $normalizeTitle((string) $cell))
+            ->filter()
+            ->values()
+            ->all();
+    };
+
+    $client = Http::timeout(30)
+        ->retry(2, 500)
+        ->withHeaders([
+            'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0 Safari/537.36',
+            'Accept-Language' => 'nl-NL,nl;q=0.9,en;q=0.8',
+        ]);
+
+    $exactMap = [];
+    $foldedMap = [];
+
+    foreach ($definitions as $definition) {
+        foreach ($letters as $letter) {
+            $url = "https://babynamengids.nl/{$definition['path']}/{$letter}/";
+            $response = $client->get($url);
+
+            if (! $response->successful()) {
+                $this->warn("{$definition['path']}/{$letter}: fallo HTTP {$response->status()}");
+                continue;
+            }
+
+            foreach ($extractTitles($response->body()) as $title) {
+                $exactKey = Str::lower($title);
+                $foldedKey = Str::lower(Str::ascii($title));
+
+                $exactMap[$exactKey] ??= [];
+                $foldedMap[$foldedKey] ??= [];
+
+                $exactMap[$exactKey][$definition['lang']] = true;
+                $foldedMap[$foldedKey][$definition['lang']] = true;
+            }
+        }
+
+        $this->line("Fuente procesada: {$definition['path']} -> {$definition['lang']}");
+    }
+
+    $names = Name::query()
+        ->where('site_id', $siteId)
+        ->where('name_category_id', $category->id)
+        ->where('gender', 'female')
+        ->orderBy('id')
+        ->get(['id', 'title', 'lang']);
+
+    $updated = 0;
+    $exactMatched = 0;
+    $foldedMatched = 0;
+    $conflicts = 0;
+    $unmatched = 0;
+
+    $reviewPath = storage_path('app/site2-meisjes-lang-review.csv');
+    $directory = dirname($reviewPath);
+
+    if (! File::isDirectory($directory)) {
+        File::makeDirectory($directory, 0777, true);
+    }
+
+    $reviewHandle = fopen($reviewPath, 'w');
+    fputcsv($reviewHandle, ['id', 'title', 'current_lang', 'status', 'matched_langs']);
+
+    foreach ($names as $name) {
+        $exactKey = Str::lower(trim($name->title));
+        $foldedKey = Str::lower(Str::ascii(trim($name->title)));
+
+        $exactLangs = array_keys($exactMap[$exactKey] ?? []);
+        $foldedLangs = array_keys($foldedMap[$foldedKey] ?? []);
+
+        $status = 'unmatched';
+        $resolvedLang = null;
+        $matchedLangs = [];
+
+        if (count($exactLangs) === 1) {
+            $resolvedLang = $exactLangs[0];
+            $matchedLangs = $exactLangs;
+            $status = 'exact';
+            $exactMatched++;
+        } elseif (count($exactLangs) > 1) {
+            $matchedLangs = $exactLangs;
+            $status = 'conflict-exact';
+            $conflicts++;
+        } elseif (count($foldedLangs) === 1) {
+            $resolvedLang = $foldedLangs[0];
+            $matchedLangs = $foldedLangs;
+            $status = 'folded';
+            $foldedMatched++;
+        } elseif (count($foldedLangs) > 1) {
+            $matchedLangs = $foldedLangs;
+            $status = 'conflict-folded';
+            $conflicts++;
+        } else {
+            $unmatched++;
+        }
+
+        if ($resolvedLang !== null && $name->lang !== $resolvedLang) {
+            $name->lang = $resolvedLang;
+            $name->save();
+            $updated++;
+        }
+
+        if ($status !== 'exact' && $status !== 'folded') {
+            fputcsv($reviewHandle, [
+                $name->id,
+                $name->title,
+                $name->lang,
+                $status,
+                implode('|', $matchedLangs),
+            ]);
+        }
+    }
+
+    fclose($reviewHandle);
+
+    $this->info("Actualizados: {$updated}");
+    $this->line("Matches exactos unicos: {$exactMatched}");
+    $this->line("Matches folded unicos: {$foldedMatched}");
+    $this->line("Conflictos: {$conflicts}");
+    $this->line("Sin match: {$unmatched}");
+    $this->line("CSV generado: {$reviewPath}");
+
+    return 0;
+})->purpose('Etiqueta el lang de meisjesnamen existentes usando listados por idioma de babynamengids.nl');
+
+Artisan::command('names:tag-babynamengids-jongens-languages {--site=2} {--category=jongensnamen} {--letters=abcdefghijklmnopqrstuvwxyz}', function () {
+    $siteId = (int) $this->option('site');
+    $categorySlug = Str::lower(trim((string) $this->option('category')));
+    $letters = collect(str_split(Str::lower((string) $this->option('letters'))))
+        ->filter(fn (string $letter) => preg_match('/^[a-z]$/', $letter) === 1)
+        ->values()
+        ->all();
+
+    $definitions = [
+        ['path' => 'belgische-jongensnamen', 'lang' => 'be'],
+        ['path' => 'friese-jongensnamen', 'lang' => 'frs'],
+        ['path' => 'franse-jongensnamen', 'lang' => 'fr'],
+        ['path' => 'italiaanse-jongensnamen', 'lang' => 'it'],
+        ['path' => 'spaanse-jongensnamen', 'lang' => 'sp'],
+        ['path' => 'engelse-jongensnamen', 'lang' => 'en'],
+        ['path' => 'afrikaanse-jongensnamen', 'lang' => 'af'],
+        ['path' => 'griekse-jongensnamen', 'lang' => 'gr'],
+        ['path' => 'islamitische-jongensnamen', 'lang' => 'isl'],
+    ];
+
+    if (! DB::table('sites')->where('id', $siteId)->exists()) {
+        $this->error("No existe el site_id={$siteId}.");
+
+        return 1;
+    }
+
+    $category = DB::table('name_categories')
+        ->select('id', 'slug')
+        ->where('site_id', $siteId)
+        ->where('slug', $categorySlug)
+        ->first();
+
+    if (! $category) {
+        $this->error("No existe la categoria '{$categorySlug}' para site_id={$siteId}.");
+
+        return 1;
+    }
+
+    $normalizeTitle = function (string $value): string {
+        $value = html_entity_decode($value, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $value = strip_tags($value);
+        $value = preg_replace('/\s+/u', ' ', trim($value)) ?? trim($value);
+
+        return $value;
+    };
+
+    $extractTitles = function (string $html) use ($normalizeTitle): array {
+        if (! preg_match('/<div id="letterblok".*?<\/div>\s*<table[^>]*>(.*?)<\/table>/si', $html, $matches)) {
+            return [];
+        }
+
+        preg_match_all('/<td\b[^>]*>(.*?)<\/td>/si', $matches[1], $cellMatches);
+
+        return collect($cellMatches[1] ?? [])
+            ->map(fn ($cell) => $normalizeTitle((string) $cell))
+            ->filter()
+            ->values()
+            ->all();
+    };
+
+    $client = Http::timeout(30)
+        ->retry(2, 500)
+        ->withHeaders([
+            'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0 Safari/537.36',
+            'Accept-Language' => 'nl-NL,nl;q=0.9,en;q=0.8',
+        ]);
+
+    $exactMap = [];
+    $foldedMap = [];
+
+    foreach ($definitions as $definition) {
+        foreach ($letters as $letter) {
+            $url = "https://babynamengids.nl/{$definition['path']}/{$letter}/";
+            $response = $client->get($url);
+
+            if (! $response->successful()) {
+                $this->warn("{$definition['path']}/{$letter}: fallo HTTP {$response->status()}");
+                continue;
+            }
+
+            foreach ($extractTitles($response->body()) as $title) {
+                $exactKey = Str::lower($title);
+                $foldedKey = Str::lower(Str::ascii($title));
+
+                $exactMap[$exactKey] ??= [];
+                $foldedMap[$foldedKey] ??= [];
+
+                $exactMap[$exactKey][$definition['lang']] = true;
+                $foldedMap[$foldedKey][$definition['lang']] = true;
+            }
+        }
+
+        $this->line("Fuente procesada: {$definition['path']} -> {$definition['lang']}");
+    }
+
+    $names = Name::query()
+        ->where('site_id', $siteId)
+        ->where('name_category_id', $category->id)
+        ->where('gender', 'male')
+        ->orderBy('id')
+        ->get(['id', 'title', 'lang']);
+
+    $updated = 0;
+    $exactMatched = 0;
+    $foldedMatched = 0;
+    $conflicts = 0;
+    $unmatched = 0;
+
+    $reviewPath = storage_path('app/site2-jongens-lang-review.csv');
+    $directory = dirname($reviewPath);
+
+    if (! File::isDirectory($directory)) {
+        File::makeDirectory($directory, 0777, true);
+    }
+
+    $reviewHandle = fopen($reviewPath, 'w');
+    fputcsv($reviewHandle, ['id', 'title', 'current_lang', 'status', 'matched_langs']);
+
+    foreach ($names as $name) {
+        $exactKey = Str::lower(trim($name->title));
+        $foldedKey = Str::lower(Str::ascii(trim($name->title)));
+
+        $exactLangs = array_keys($exactMap[$exactKey] ?? []);
+        $foldedLangs = array_keys($foldedMap[$foldedKey] ?? []);
+
+        $status = 'unmatched';
+        $resolvedLang = null;
+        $matchedLangs = [];
+
+        if (count($exactLangs) === 1) {
+            $resolvedLang = $exactLangs[0];
+            $matchedLangs = $exactLangs;
+            $status = 'exact';
+            $exactMatched++;
+        } elseif (count($exactLangs) > 1) {
+            $matchedLangs = $exactLangs;
+            $status = 'conflict-exact';
+            $conflicts++;
+        } elseif (count($foldedLangs) === 1) {
+            $resolvedLang = $foldedLangs[0];
+            $matchedLangs = $foldedLangs;
+            $status = 'folded';
+            $foldedMatched++;
+        } elseif (count($foldedLangs) > 1) {
+            $matchedLangs = $foldedLangs;
+            $status = 'conflict-folded';
+            $conflicts++;
+        } else {
+            $unmatched++;
+        }
+
+        if ($resolvedLang !== null && $name->lang !== $resolvedLang) {
+            $name->lang = $resolvedLang;
+            $name->save();
+            $updated++;
+        }
+
+        if ($status !== 'exact' && $status !== 'folded') {
+            fputcsv($reviewHandle, [
+                $name->id,
+                $name->title,
+                $name->lang,
+                $status,
+                implode('|', $matchedLangs),
+            ]);
+        }
+    }
+
+    fclose($reviewHandle);
+
+    $this->info("Actualizados: {$updated}");
+    $this->line("Matches exactos unicos: {$exactMatched}");
+    $this->line("Matches folded unicos: {$foldedMatched}");
+    $this->line("Conflictos: {$conflicts}");
+    $this->line("Sin match: {$unmatched}");
+    $this->line("CSV generado: {$reviewPath}");
+
+    return 0;
+})->purpose('Etiqueta el lang de jongensnamen existentes usando listados por idioma de babynamengids.nl');
+
+Artisan::command('names:tag-babynamengids-special-tags {--site=2}', function () {
+    $siteId = (int) $this->option('site');
+
+    if (! DB::table('sites')->where('id', $siteId)->exists()) {
+        $this->error("No existe el site_id={$siteId}.");
+
+        return 1;
+    }
+
+    $definitions = [
+        ['slug' => 'stoere', 'url' => 'https://babynamengids.nl/stoere/', 'gender' => null, 'category_slug' => null],
+        ['slug' => 'korte', 'url' => 'https://babynamengids.nl/korte/', 'gender' => null, 'category_slug' => null],
+        ['slug' => 'unieke', 'url' => 'https://babynamengids.nl/unieke/', 'gender' => null, 'category_slug' => null],
+        ['slug' => 'klassieke', 'url' => 'https://babynamengids.nl/klassieke/', 'gender' => null, 'category_slug' => null],
+        ['slug' => 'bijzondere', 'url' => 'https://babynamengids.nl/bijzondere/', 'gender' => null, 'category_slug' => null],
+        ['slug' => 'betekenis-namen', 'url' => 'https://babynamengids.nl/betekenis-namen/', 'gender' => null, 'category_slug' => null],
+        ['slug' => 'ouderwetse', 'url' => 'https://babynamengids.nl/jongensnamen/ouderwetse-j/', 'gender' => 'male', 'category_slug' => 'jongensnamen'],
+        ['slug' => 'ouderwetse', 'url' => 'https://babynamengids.nl/meisjesnamen/ouderwetse-m/', 'gender' => 'female', 'category_slug' => 'meisjesnamen'],
+    ];
+
+    $normalizeTitle = function (string $value): string {
+        $value = html_entity_decode($value, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $value = strip_tags($value);
+        $value = preg_replace('/\s+/u', ' ', trim($value)) ?? trim($value);
+
+        return $value;
+    };
+
+    $extractTitles = function (string $html) use ($normalizeTitle): array {
+        if (! preg_match('/<table[^>]*>(.*?)<\/table>/si', $html, $matches)) {
+            return [];
+        }
+
+        preg_match_all('/<td\b[^>]*>(.*?)<\/td>/si', $matches[1], $cellMatches);
+
+        return collect($cellMatches[1] ?? [])
+            ->map(fn ($cell) => $normalizeTitle((string) $cell))
+            ->filter()
+            ->values()
+            ->all();
+    };
+
+    $client = Http::timeout(30)
+        ->retry(2, 500)
+        ->withHeaders([
+            'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0 Safari/537.36',
+            'Accept-Language' => 'nl-NL,nl;q=0.9,en;q=0.8',
+        ]);
+
+    $categoryIds = DB::table('name_categories')
+        ->where('site_id', $siteId)
+        ->pluck('id', 'slug')
+        ->all();
+
+    $reviewPath = storage_path('app/site2-special-tags-review.csv');
+    $directory = dirname($reviewPath);
+
+    if (! File::isDirectory($directory)) {
+        File::makeDirectory($directory, 0777, true);
+    }
+
+    $reviewHandle = fopen($reviewPath, 'w');
+    fputcsv($reviewHandle, ['tag', 'title', 'status', 'matches']);
+
+    $updated = 0;
+    $tagCounts = [];
+
+    foreach ($definitions as $definition) {
+        $response = $client->get($definition['url']);
+
+        if (! $response->successful()) {
+            $this->warn("{$definition['slug']}: fallo HTTP {$response->status()} en {$definition['url']}");
+            continue;
+        }
+
+        $titles = $extractTitles($response->body());
+        $tagCounts[$definition['slug']] = $tagCounts[$definition['slug']] ?? 0;
+        $seen = [];
+
+        foreach ($titles as $title) {
+            $normalized = Str::lower($title);
+            if (isset($seen[$normalized])) {
+                continue;
+            }
+            $seen[$normalized] = true;
+
+            $query = Name::query()
+                ->where('site_id', $siteId)
+                ->when($definition['gender'], fn ($q, $gender) => $q->where('gender', $gender))
+                ->when($definition['category_slug'] && isset($categoryIds[$definition['category_slug']]), fn ($q) => $q->where('name_category_id', $categoryIds[$definition['category_slug']]))
+                ->where(function ($q) use ($title): void {
+                    $q->whereRaw('LOWER(title) = ?', [Str::lower($title)])
+                        ->orWhereRaw('LOWER(title) = ?', [Str::lower(Str::ascii($title))]);
+                });
+
+            $matches = $query->get(['id', 'title', 'tags']);
+
+            if ($matches->isEmpty()) {
+                fputcsv($reviewHandle, [$definition['slug'], $title, 'unmatched', '0']);
+                continue;
+            }
+
+            foreach ($matches as $name) {
+                $tags = collect(is_array($name->tags) ? $name->tags : [])
+                    ->push($definition['slug'])
+                    ->filter(fn ($item) => is_string($item) && trim($item) !== '')
+                    ->map(fn ($item) => Str::lower(trim($item)))
+                    ->unique()
+                    ->values()
+                    ->all();
+
+                if (($name->tags ?? []) !== $tags) {
+                    $name->tags = $tags;
+                    $name->save();
+                    $updated++;
+                    $tagCounts[$definition['slug']]++;
+                }
+            }
+
+            fputcsv($reviewHandle, [$definition['slug'], $title, 'matched', (string) $matches->count()]);
+        }
+
+        $this->line("{$definition['slug']}: procesado " . count($titles) . ' nombres fuente');
+    }
+
+    fclose($reviewHandle);
+
+    $this->info("Actualizaciones aplicadas: {$updated}");
+    foreach ($tagCounts as $slug => $count) {
+        $this->line("{$slug}: {$count} updates");
+    }
+    $this->line("CSV generado: {$reviewPath}");
+
+    return 0;
+})->purpose('Importa tags especiales desde babynamengids.nl y los asigna a names del site 2');

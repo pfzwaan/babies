@@ -1,19 +1,27 @@
 @extends('themes.babies.names.layout')
 
-@section('title', $nameCategory->name . ' ' . $letter . ' - Babynamengids')
+@php($archivePrefix = $activeLanguageLabel ?? $activeTagLabel ?? '')
+@php($archiveHeading = trim($archivePrefix . ' ' . $nameCategory->name))
+
+@section('title', $archiveHeading . ' ' . $letter . ' - Babynamengids')
 
 @section('main-content')
     <section>
         <div class="flex items-end gap-4">
-            <h2 class="text-[34px] font-bold leading-[1.02] text-[#353535] lg:text-[55px] lg:leading-[50px]" style="font-family:Outfit,sans-serif;">{{ $nameCategory->name }} op alfabet</h2>
+            <h2 class="text-[34px] font-bold leading-[1.02] text-[#353535] lg:text-[55px] lg:leading-[50px]" style="font-family:Outfit,sans-serif;">{{ $archiveHeading }} op alfabet</h2>
             <img src="{{ asset('img/babies/seo-sun.svg') }}" alt="" aria-hidden="true" class="hidden h-[52px] w-[56px] shrink-0 lg:block" />
         </div>
 
         <div class="mt-7 rounded-[20px] border border-[#E8EEF6] bg-white p-4 lg:p-[22px]">
             <div class="grid grid-cols-4 gap-[10px] sm:grid-cols-6 md:grid-cols-13 md:gap-[20px]">
                 @foreach($letters as $alpha)
+                    @php($letterUrl = $activeLanguageSlug
+                        ? route('names.category.language.letter', ['nameCategory' => $nameCategory, 'languageSlug' => $activeLanguageSlug, 'letter' => strtolower($alpha)])
+                        : ($activeTagSlug
+                            ? route('names.category.tag.single.letter', ['nameCategory' => $nameCategory, 'tagSlug' => $activeTagSlug, 'letter' => strtolower($alpha)])
+                            : route('names.category.letter', ['nameCategory' => $nameCategory, 'letter' => strtolower($alpha)])))
                     <a
-                        href="{{ route('names.category.letter', ['nameCategory' => $nameCategory, 'letter' => strtolower($alpha)]) }}"
+                        href="{{ $letterUrl }}"
                         class="flex h-[54px] items-center justify-center rounded-[16px] border bg-white text-[18px] font-semibold transition-colors md:h-[66px] md:rounded-[20px] md:text-[28px]"
                         style="{{ $alpha === $letter ? 'border: 3px solid #FF7D97; color: #FF7D97;' : 'border-color: #E0EEFE; color: #353B52;' }}"
                     >{{ $alpha }}</a>
@@ -25,7 +33,7 @@
     <section>
         @php($topLetterNames = ($namesToRender ?? collect())->take(10)->values())
         <img src="{{ asset('img/babies/seo-crown.svg') }}" alt="" aria-hidden="true" class="h-[32px] w-[39px] lg:h-[41px] lg:w-[50px]" />
-        <h3 class="mt-3 text-[30px] font-bold leading-[1.02] text-[#353535] lg:text-[55px] lg:leading-[50px]" style="font-family:Outfit,sans-serif;">Top 10 {{ strtolower($nameCategory->name) }} met een {{ $letter }}</h3>
+        <h3 class="mt-3 text-[30px] font-bold leading-[1.02] text-[#353535] lg:text-[55px] lg:leading-[50px]" style="font-family:Outfit,sans-serif;">Top 10 {{ strtolower($archiveHeading) }} met een {{ $letter }}</h3>
 
         <div class="mt-10 rounded-[30px] bg-[#63A7E9] p-[18px] lg:p-[22px]">
             <div class="rounded-[30px] bg-white px-7 py-8 lg:px-[51px] lg:py-[44px]">
@@ -59,7 +67,7 @@
     <section>
         <img src="{{ asset('img/babies/seo-crown.svg') }}" alt="" aria-hidden="true" class="h-[32px] w-[39px] lg:h-[41px] lg:w-[50px]" />
         <h3 class="mt-3 text-[30px] font-bold leading-[1.02] text-[#353535] lg:text-[55px] lg:leading-[50px]" style="font-family:Outfit,sans-serif;">Namen met een {{ $letter }}</h3>
-        <p class="mt-5 text-[17px] leading-[1.8] text-[#353535] lg:text-[20px] lg:leading-[35px]">Zoeken op beginletter maakt het makkelijker om namen te vergelijken op klank, lengte en stijl. Met de letter {{ $letter }} ontdek je snel welke namen binnen {{ strtolower($nameCategory->name) }} het beste passen bij wat je zoekt.</p>
+        <p class="mt-5 text-[17px] leading-[1.8] text-[#353535] lg:text-[20px] lg:leading-[35px]">Zoeken op beginletter maakt het makkelijker om namen te vergelijken op klank, lengte en stijl. Met de letter {{ $letter }} ontdek je snel welke namen binnen {{ strtolower($archiveHeading) }} het beste passen bij wat je zoekt.</p>
 
         <div class="mt-10 rounded-[30px] bg-[#E0EEFE] px-6 py-8 lg:px-[63px] lg:py-[55px]">
             @php($columns = ($namesToRender ?? collect())->take(100)->chunk(20))
@@ -86,7 +94,7 @@
     <section>
         <img src="{{ asset('img/babies/seo-crown.svg') }}" alt="" aria-hidden="true" class="h-[32px] w-[39px] lg:h-[41px] lg:w-[50px]" />
         <h3 class="mt-3 text-[30px] font-bold leading-[1.02] text-[#353535] lg:text-[55px] lg:leading-[60px]" style="font-family:Outfit,sans-serif;">Nederlandse en internationale namen met {{ $letter }}</h3>
-        <p class="mt-5 text-[17px] leading-[1.8] text-[#353535] lg:text-[20px] lg:leading-[35px]">Binnen {{ strtolower($nameCategory->name) }} met de letter {{ $letter }} vind je vaak zowel Nederlandse als internationale opties. Daardoor kun je namen vergelijken op herkomst, uitstraling en betekenis, zonder het overzicht te verliezen.</p>
+        <p class="mt-5 text-[17px] leading-[1.8] text-[#353535] lg:text-[20px] lg:leading-[35px]">Binnen {{ strtolower($archiveHeading) }} met de letter {{ $letter }} vind je vaak zowel Nederlandse als internationale opties. Daardoor kun je namen vergelijken op herkomst, uitstraling en betekenis, zonder het overzicht te verliezen.</p>
     </section>
 
     <section>
