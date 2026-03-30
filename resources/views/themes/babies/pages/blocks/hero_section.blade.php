@@ -12,7 +12,7 @@
 <section class="relative overflow-hidden bg-[#F9E3BF] lg:-mt-[30px] lg:min-h-[748px]">
     <img src="{{ asset('img/babies/hero-ornaments.svg') }}" alt="" aria-hidden="true" class="pointer-events-none absolute left-1/2 top-[40px] hidden w-[1518px] max-w-none -translate-x-1/2 opacity-35 lg:block" />
 
-    <div class="relative container mx-auto pt-10 pb-12 md:pt-12 md:pb-14 lg:pt-[105px] lg:pb-[56px]">
+    <div class="relative container mx-auto pt-10 pb-12 md:pt-12 md:pb-14 lg:pt-[105px] lg:pb-[56px] px-3 lg:px-0">
         <h1 class="mx-auto max-w-[1125px] text-center text-[42px] font-bold leading-[48px] text-[#2f2f2f] md:text-[55px] md:leading-[50px]" style="font-family: Outfit, sans-serif;">
             {{ $titlePrefix }} <span class="text-[#FF7D97]">{{ $titleHighlight }}</span> {{ $titleSuffix }}
         </h1>

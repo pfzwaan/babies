@@ -49,10 +49,30 @@ class NameController extends Controller
         return redirect()->route('names.archive', $params);
     }
 
-    public function archiveGlobal(Request $request): View
+    public function archiveGlobal(Request $request): View|RedirectResponse
     {
         $site = $this->resolveSiteFromRequest($request);
         $siteId = $site?->id;
+        $query = trim((string) $request->query('q'));
+        $categorySlug = trim((string) $request->query('category'));
+        $activeGender = $this->normalizeGender($request->query('gender'));
+
+        if (filled($categorySlug)) {
+            return $this->search($request);
+        }
+
+        $searchResults = collect();
+
+        if (filled($query)) {
+            $searchResults = Name::query()
+                ->with('nameCategory:id,name,slug')
+                ->when($siteId, fn ($builder) => $builder->where('site_id', $siteId))
+                ->when($activeGender, fn ($builder, $value) => $builder->where('gender', $value))
+                ->where('title', 'like', '%' . $query . '%')
+                ->orderBy('title')
+                ->limit(100)
+                ->get(['id', 'title', 'slug', 'name_category_id', 'gender']);
+        }
 
         $popularNames = Name::query()
             ->with('nameCategory:id,slug')
@@ -63,6 +83,9 @@ class NameController extends Controller
 
         return $this->resolveThemedView($request, 'names.archive_global', [
             'popularNames' => $popularNames,
+            'activeQuery' => $query,
+            'activeGender' => $activeGender,
+            'searchResults' => $searchResults,
         ] + $this->sharedArchiveViewData($siteId));
     }
 
@@ -98,6 +121,55 @@ class NameController extends Controller
         abort_if($normalizedGender === null, 404);
 
         return $this->renderCategoryIndex($nameCategory, $request, $normalizedGender, null, $siteId);
+    }
+
+    public function resolveCategorySegment(NameCategory $nameCategory, string $segment, Request $request): View
+    {
+        $site = $this->resolveSiteFromRequest($request);
+        $siteId = $site?->id;
+
+        if ($this->normalizeLanguageFromSlug($segment) !== null) {
+            return $this->categoryByLanguage($nameCategory, $segment, $request);
+        }
+
+        if ($this->normalizeGenderFromSlug($segment) !== null) {
+            return $this->categoryByGender($nameCategory, $segment, $request);
+        }
+
+        if (preg_match('/^[A-Za-z]$/', $segment) === 1) {
+            return $this->category($nameCategory, $segment, $request);
+        }
+
+        $name = $nameCategory->names()
+            ->when($siteId, fn ($query) => $query->where('site_id', $siteId))
+            ->where('slug', $segment)
+            ->first();
+
+        if ($name) {
+            return $this->renderShow($request, $nameCategory, $name, $siteId);
+        }
+
+        if ($this->shouldResolveAsSpecialTag($nameCategory, $segment, $siteId)) {
+            return $this->categoryBySpecialTag($nameCategory, $segment, $request);
+        }
+
+        abort(404);
+    }
+
+    public function resolveCategorySegmentLetter(NameCategory $nameCategory, string $segment, string $letter, Request $request): View
+    {
+        $site = $this->resolveSiteFromRequest($request);
+        $siteId = $site?->id;
+
+        if ($this->normalizeLanguageFromSlug($segment) !== null) {
+            return $this->categoryByLanguageLetter($nameCategory, $segment, $letter, $request);
+        }
+
+        if ($this->shouldResolveAsSpecialTag($nameCategory, $segment, $siteId)) {
+            return $this->categoryBySpecialTagLetter($nameCategory, $segment, $letter, $request);
+        }
+
+        abort(404);
     }
 
     public function categoryByLanguage(NameCategory $nameCategory, string $languageSlug, Request $request): View
@@ -296,19 +368,7 @@ class NameController extends Controller
         $site = $this->resolveSiteFromRequest($request);
         $siteId = $site?->id;
 
-        abort_unless($name->name_category_id === $nameCategory->id, 404);
-        abort_if($siteId !== null && $name->site_id !== $siteId, 404);
-
-        $approvedComments = $name->comments()
-            ->where('is_approved', true)
-            ->latest()
-            ->get(['id', 'author_name', 'message', 'created_at']);
-
-        return $this->resolveThemedView($request, 'names.show', [
-            'name' => $name,
-            'nameCategory' => $nameCategory,
-            'approvedComments' => $approvedComments,
-        ]);
+        return $this->renderShow($request, $nameCategory, $name, $siteId);
     }
 
     public function like(Request $request, NameCategory $nameCategory, Name $name): RedirectResponse|JsonResponse
@@ -457,19 +517,12 @@ class NameController extends Controller
     private function normalizeLanguageFromSlug(string $languageSlug): ?array
     {
         $value = Str::lower(trim($languageSlug));
+        $languages = config('name_languages', []);
+        $language = $languages[$value] ?? null;
 
-        return match ($value) {
-            'belgische' => ['code' => 'be', 'slug' => 'belgische', 'label' => 'Belgische'],
-            'friese' => ['code' => 'frs', 'slug' => 'friese', 'label' => 'Friese'],
-            'franse' => ['code' => 'fr', 'slug' => 'franse', 'label' => 'Franse'],
-            'italiaanse' => ['code' => 'it', 'slug' => 'italiaanse', 'label' => 'Italiaanse'],
-            'spaanse' => ['code' => 'sp', 'slug' => 'spaanse', 'label' => 'Spaanse'],
-            'engelse' => ['code' => 'en', 'slug' => 'engelse', 'label' => 'Engelse'],
-            'afrikaanse' => ['code' => 'af', 'slug' => 'afrikaanse', 'label' => 'Afrikaanse'],
-            'griekse' => ['code' => 'gr', 'slug' => 'griekse', 'label' => 'Griekse'],
-            'islamitische' => ['code' => 'isl', 'slug' => 'islamitische', 'label' => 'Islamitische'],
-            default => null,
-        };
+        return $language
+            ? ['code' => $language['code'], 'slug' => $value, 'label' => $language['label']]
+            : null;
     }
 
     private function normalizeLanguageCode(mixed $language): ?string
@@ -499,18 +552,13 @@ class NameController extends Controller
             return $normalized['slug'];
         }
 
-        return match ($value) {
-            'be' => 'belgische',
-            'frs' => 'friese',
-            'fr' => 'franse',
-            'it' => 'italiaanse',
-            'sp' => 'spaanse',
-            'en' => 'engelse',
-            'af' => 'afrikaanse',
-            'gr' => 'griekse',
-            'isl' => 'islamitische',
-            default => null,
-        };
+        foreach (config('name_languages', []) as $slug => $language) {
+            if (($language['code'] ?? null) === $value) {
+                return $slug;
+            }
+        }
+
+        return null;
     }
 
     private function languageLabelFromValue(mixed $language): ?string
@@ -525,34 +573,35 @@ class NameController extends Controller
             return $normalized['label'];
         }
 
-        return match ($value) {
-            'be' => 'Belgische',
-            'frs' => 'Friese',
-            'fr' => 'Franse',
-            'it' => 'Italiaanse',
-            'sp' => 'Spaanse',
-            'en' => 'Engelse',
-            'af' => 'Afrikaanse',
-            'gr' => 'Griekse',
-            'isl' => 'Islamitische',
-            default => null,
-        };
+        foreach (config('name_languages', []) as $language) {
+            if (($language['code'] ?? null) === $value) {
+                return $language['label'] ?? null;
+            }
+        }
+
+        return null;
     }
 
     private function normalizeSpecialTagFromSlug(string $tagSlug): ?array
     {
         $value = Str::lower(trim($tagSlug));
+        foreach (config('name_special_tags', []) as $slug => $tag) {
+            if (in_array($value, $tag['matches'] ?? [], true)) {
+                return [
+                    'slug' => $slug,
+                    'label' => $tag['label'],
+                    'matches' => $tag['matches'] ?? [$slug],
+                ];
+            }
+        }
 
-        return match ($value) {
-            'stoere' => ['slug' => 'stoere', 'label' => 'Stoere'],
-            'korte' => ['slug' => 'korte', 'label' => 'Korte'],
-            'unieke' => ['slug' => 'unieke', 'label' => 'Unieke'],
-            'ouderwetse' => ['slug' => 'ouderwetse', 'label' => 'Ouderwetse'],
-            'klassieke' => ['slug' => 'klassieke', 'label' => 'Klassieke'],
-            'bijzondere' => ['slug' => 'bijzondere', 'label' => 'Bijzondere'],
-            'betekenis-namen' => ['slug' => 'betekenis-namen', 'label' => 'Betekenis namen'],
-            default => null,
-        };
+        return $value !== ''
+            ? [
+                'slug' => $value,
+                'label' => Str::headline(str_replace('-', ' ', $value)),
+                'matches' => [$value],
+            ]
+            : null;
     }
 
     private function renderCategoryIndex(
@@ -662,6 +711,29 @@ class NameController extends Controller
             return [];
         }
 
+        $normalizedTag = $this->normalizeSpecialTagFromSlug($tagSlug);
+        if ($normalizedTag !== null) {
+            return collect($normalizedTag['matches'] ?? [])
+                ->flatMap(function (string $candidate): array {
+                    $slug = Str::slug($candidate);
+                    $spaced = str_replace('-', ' ', $slug);
+
+                    return [
+                        $candidate,
+                        Str::lower($candidate),
+                        Str::title($candidate),
+                        $slug,
+                        $spaced,
+                        Str::lower($spaced),
+                        Str::title($spaced),
+                    ];
+                })
+                ->filter(fn ($item) => filled($item))
+                ->unique()
+                ->values()
+                ->all();
+        }
+
         $decoded = trim(urldecode((string) $tagSlug));
         $slug = Str::slug($decoded);
         $spaced = str_replace('-', ' ', $slug);
@@ -679,6 +751,49 @@ class NameController extends Controller
             ->unique()
             ->values()
             ->all();
+    }
+
+    private function shouldResolveAsSpecialTag(NameCategory $category, string $tagSlug, ?int $siteId): bool
+    {
+        $normalized = $this->normalizeSpecialTagFromSlug($tagSlug);
+        if ($normalized === null) {
+            return false;
+        }
+
+        $configuredTag = collect(config('name_special_tags', []))
+            ->contains(fn (array $tag) => in_array(Str::lower(trim($tagSlug)), $tag['matches'] ?? [], true));
+
+        if ($configuredTag) {
+            return true;
+        }
+
+        $tagCandidates = $this->expandTagCandidates($normalized['slug']);
+
+        return $category->names()
+            ->when($siteId, fn ($query) => $query->where('site_id', $siteId))
+            ->where(function ($tagQuery) use ($tagCandidates): void {
+                foreach ($tagCandidates as $candidate) {
+                    $tagQuery->orWhereJsonContains('tags', $candidate);
+                }
+            })
+            ->exists();
+    }
+
+    private function renderShow(Request $request, NameCategory $nameCategory, Name $name, ?int $siteId): View
+    {
+        abort_unless($name->name_category_id === $nameCategory->id, 404);
+        abort_if($siteId !== null && $name->site_id !== $siteId, 404);
+
+        $approvedComments = $name->comments()
+            ->where('is_approved', true)
+            ->latest()
+            ->get(['id', 'author_name', 'message', 'created_at']);
+
+        return $this->resolveThemedView($request, 'names.show', [
+            'name' => $name,
+            'nameCategory' => $nameCategory,
+            'approvedComments' => $approvedComments,
+        ]);
     }
 
     private function storeRecentSearch(

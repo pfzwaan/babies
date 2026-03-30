@@ -15,13 +15,13 @@
     $footerContent4 = $global->footer_content_4 ?: '
         <ul>
             <li>&rsaquo; <a href="/jongensnamen/stoere">Stoere namen</a></li>
-            <li>&rsaquo; <a href="/jongensnamen/korte">Korte namen</a></li>
-            <li>&rsaquo; <a href="/jongensnamen/unieke">Unieke namen</a></li>
-            <li>&rsaquo; <a href="/jongensnamen/ouderwetse">Ouderwetse namen</a></li>
-            <li>&rsaquo; <a href="/jongensnamen/ouderwetse">Ouderwetse jongensnamen</a></li>
-            <li>&rsaquo; <a href="/meisjesnamen/ouderwetse">Ouderwetse meisjesnamen</a></li>
-            <li>&rsaquo; <a href="/jongensnamen/klassieke">Klassieke namen</a></li>
-            <li>&rsaquo; <a href="/jongensnamen/bijzondere">Bijzondere namen</a></li>
+            <li>&rsaquo; <a href="/jongensnamen/kort">Korte namen</a></li>
+            <li>&rsaquo; <a href="/jongensnamen/uniek">Unieke namen</a></li>
+            <li>&rsaquo; <a href="/jongensnamen/ouderwets">Ouderwetse namen</a></li>
+            <li>&rsaquo; <a href="/jongensnamen/ouderwets">Ouderwetse jongensnamen</a></li>
+            <li>&rsaquo; <a href="/meisjesnamen/ouderwets">Ouderwetse meisjesnamen</a></li>
+            <li>&rsaquo; <a href="/jongensnamen/klassiek">Klassieke namen</a></li>
+            <li>&rsaquo; <a href="/jongensnamen/bijzonder">Bijzondere namen</a></li>
             <li>&rsaquo; <a href="/jongensnamen/betekenis-namen">Betekenis namen</a></li>
         </ul>';
 
@@ -32,28 +32,25 @@
     $specialNamesLinks = '
         <ul>
             <li>&rsaquo; <a href="/jongensnamen/stoere">Stoere namen</a></li>
-            <li>&rsaquo; <a href="/jongensnamen/korte">Korte namen</a></li>
-            <li>&rsaquo; <a href="/jongensnamen/unieke">Unieke namen</a></li>
-            <li>&rsaquo; <a href="/jongensnamen/ouderwetse">Ouderwetse namen</a></li>
-            <li>&rsaquo; <a href="/jongensnamen/ouderwetse">Ouderwetse jongensnamen</a></li>
-            <li>&rsaquo; <a href="/meisjesnamen/ouderwetse">Ouderwetse meisjesnamen</a></li>
-            <li>&rsaquo; <a href="/jongensnamen/klassieke">Klassieke namen</a></li>
-            <li>&rsaquo; <a href="/jongensnamen/bijzondere">Bijzondere namen</a></li>
+            <li>&rsaquo; <a href="/jongensnamen/kort">Korte namen</a></li>
+            <li>&rsaquo; <a href="/jongensnamen/uniek">Unieke namen</a></li>
+            <li>&rsaquo; <a href="/jongensnamen/ouderwets">Ouderwetse namen</a></li>
+            <li>&rsaquo; <a href="/jongensnamen/ouderwets">Ouderwetse jongensnamen</a></li>
+            <li>&rsaquo; <a href="/meisjesnamen/ouderwets">Ouderwetse meisjesnamen</a></li>
+            <li>&rsaquo; <a href="/jongensnamen/klassiek">Klassieke namen</a></li>
+            <li>&rsaquo; <a href="/jongensnamen/bijzonder">Bijzondere namen</a></li>
             <li>&rsaquo; <a href="/jongensnamen/betekenis-namen">Betekenis namen</a></li>
         </ul>';
 
-    $countryLinks = '
-        <ul>
-            <li>&rsaquo; <a href="/jongensnamen/belgische">Belgische jongensnamen</a></li>
-            <li>&rsaquo; <a href="/jongensnamen/friese">Friese jongensnamen</a></li>
-            <li>&rsaquo; <a href="/jongensnamen/franse">Franse jongensnamen</a></li>
-            <li>&rsaquo; <a href="/jongensnamen/italiaanse">Italiaanse jongensnamen</a></li>
-            <li>&rsaquo; <a href="/jongensnamen/spaanse">Spaanse jongensnamen</a></li>
-            <li>&rsaquo; <a href="/jongensnamen/engelse">Engelse jongensnamen</a></li>
-            <li>&rsaquo; <a href="/jongensnamen/afrikaanse">Afrikaanse jongensnamen</a></li>
-            <li>&rsaquo; <a href="/jongensnamen/griekse">Griekse jongensnamen</a></li>
-            <li>&rsaquo; <a href="/jongensnamen/islamitische">Islamitische jongensnamen</a></li>
-        </ul>';
+    $countryLinks = '<ul>';
+    foreach (config('name_languages', []) as $slug => $language) {
+        $countryLinks .= sprintf(
+            '<li>&rsaquo; <a href="%s">%s jongensnamen</a></li>',
+            route('names.category.language', ['nameCategory' => 'jongensnamen', 'languageSlug' => $slug]),
+            e($language['label'])
+        );
+    }
+    $countryLinks .= '</ul>';
 
     if ($isBabyNamesSite) {
         $footerContent2 .= $specialNamesLinks;

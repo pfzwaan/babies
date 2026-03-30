@@ -514,10 +514,6 @@
   background: #eff4f9;
 }
 
-.theme-babies .babies-alphabet__panel {
-  padding: 0;
-}
-
 .theme-babies .babies-alphabet__title {
   margin: 0 0 32px;
   color: #353c52;
@@ -658,10 +654,6 @@
   .theme-babies .babies-seo__tips span {
     font-size: 15px;
     line-height: 1.55;
-  }
-
-  .theme-babies .babies-alphabet__panel {
-    padding: 0;
   }
 
   .theme-babies .babies-alphabet__title {

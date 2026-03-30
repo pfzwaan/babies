@@ -26,7 +26,7 @@
 @endphp
 
 <section class="babies-alphabet">
-    <div class="container mx-auto babies-alphabet__panel">
+    <div class="container px-3 lg:px-0 mx-auto babies-alphabet__panel">
         <h2 class="babies-alphabet__title">{{ $title }}</h2>
 
         <div class="babies-alphabet__grid">

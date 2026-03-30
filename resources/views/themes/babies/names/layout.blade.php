@@ -27,11 +27,11 @@
                 <select name="category" class="h-[52px] rounded-[10px] border border-[#D9D9D9] px-4 text-[15px] text-[#565656]">
                     <option value="">Alle categorieen</option>
                     @foreach($categories as $category)
-                        <option value="{{ $category->slug }}">{{ $category->name }}</option>
+                        <option value="{{ $category->slug }}" @selected((string) request()->query('category') === $category->slug)>{{ $category->name }}</option>
                     @endforeach
                 </select>
 
-                <input type="text" name="q" placeholder="Zoek naar namen" class="h-[52px] rounded-[10px] border border-[#D9D9D9] px-4 text-[15px] text-[#565656]" />
+                <input type="text" name="q" value="{{ request()->query('q', '') }}" placeholder="Zoek naar namen" class="h-[52px] rounded-[10px] border border-[#D9D9D9] px-4 text-[15px] text-[#565656]" />
 
                 <button type="submit" class="inline-flex h-[52px] items-center justify-center rounded-full bg-[#FF7D97] px-6 text-[15px] font-semibold text-white">Zoek namen</button>
             </form>
@@ -43,7 +43,7 @@
             <a href="{{ url('/') }}">Home</a> &gt; <span class="font-semibold text-[#353535]">Namen</span>
         </nav>
 
-        <div class="mt-8 grid gap-8 xl:grid-cols-[minmax(0,1fr)_408px] xl:items-start xl:gap-[28px]">
+        <div class="mt-8 flex flex-col lg:grid lg:gap-8 xl:grid-cols-[minmax(0,1fr)_408px] xl:items-start xl:gap-[28px]">
             <section class="main-content space-y-10">
                 @yield('main-content')
             </section>

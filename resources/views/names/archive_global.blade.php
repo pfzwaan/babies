@@ -44,6 +44,40 @@
 
     <div class="grid gap-8 lg:grid-cols-12">
         <div class="lg:col-span-8 xl:col-span-9">
+            @if(filled($activeQuery ?? ''))
+                <section class="mb-10 rounded-[30px] bg-panel p-6 md:p-10">
+                    <h2 class="font-fredoka text-2xl font-semibold md:text-[40px] md:leading-[53px]">Zoekresultaten voor "{{ $activeQuery }}"</h2>
+                    <p class="mt-4 text-[18px] leading-[35px]">
+                        @if(($searchResults ?? collect())->isNotEmpty())
+                            {{ $searchResults->count() }} namen gevonden.
+                        @else
+                            Geen namen gevonden voor deze zoekopdracht.
+                        @endif
+                    </p>
+
+                    <div class="mt-6">
+                        @if(($searchResults ?? collect())->isNotEmpty())
+                            @php($resultColumns = $searchResults->chunk(20))
+                            <div class="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
+                                @foreach($resultColumns as $chunk)
+                                    <ul class="space-y-2 text-[18px] leading-[35px]">
+                                        @foreach($chunk as $item)
+                                            <li>
+                                                <a href="{{ route('names.show', ['nameCategory' => $item->nameCategory, 'name' => $item]) }}">{{ $item->title }}</a>
+                                                @if($item->nameCategory)
+                                                    <span class="ml-2 text-sm text-[#82858C]">({{ $item->nameCategory->name }})</span>
+                                                @endif
+                                            </li>
+                                        @endforeach
+                                    </ul>
+                                @endforeach
+                            </div>
+                        @else
+                            <p class="text-[18px] leading-[35px]">Probeer een andere zoekterm of gebruik een categorie.</p>
+                        @endif
+                    </div>
+                </section>
+            @endif
 
             <!-- from figma: 26744:1398 -->
             <section class="mb-10">

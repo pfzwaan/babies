@@ -80,7 +80,7 @@
             <a href="{{ url('/') }}">Home</a> &gt; <a href="{{ url('/blog') }}">Blog</a> &gt; <span class="font-semibold text-[#353535]">{{ $blog->title }}</span>
         </nav>
 
-        <div class="mt-8 grid gap-8 xl:grid-cols-[minmax(0,1fr)_408px] xl:items-start xl:gap-[28px]">
+        <div class="mt-8 flex flex-col lg:grid lg:gap-8 xl:grid-cols-[minmax(0,1fr)_408px] xl:items-start xl:gap-[28px]">
             <article class="min-w-0">
                 <img src="{{ $coverImage }}" alt="{{ $blog->title }}" class="h-auto w-full rounded-[30px] object-cover" />
 

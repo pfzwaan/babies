@@ -33,7 +33,7 @@
 @endphp
 
 <section class="babies-seo">
-    <div class="container mx-auto">
+    <div class="container px-3 lg:px-0 mx-auto">
         <div class="babies-seo__stack">
             @foreach ($sections as $section)
                 <article class="babies-seo__item">

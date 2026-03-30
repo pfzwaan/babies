@@ -3,6 +3,44 @@
 @section('title', 'Namen Archief - Babynamengids')
 
 @section('main-content')
+    @if(filled($activeQuery ?? ''))
+        <section>
+            <div class="flex items-end gap-4">
+                <h2 class="text-[34px] font-bold leading-[1.02] text-[#353535] lg:text-[55px] lg:leading-[50px]" style="font-family:Outfit,sans-serif;">Zoekresultaten voor "{{ $activeQuery }}"</h2>
+                <img src="{{ asset('img/babies/seo-sun.svg') }}" alt="" aria-hidden="true" class="hidden h-[52px] w-[56px] shrink-0 lg:block" />
+            </div>
+            <p class="mt-5 text-[17px] leading-[1.8] text-[#353535] lg:text-[20px] lg:leading-[35px]">
+                @if(($searchResults ?? collect())->isNotEmpty())
+                    {{ $searchResults->count() }} namen gevonden{{ ($activeGender ?? null) === 'female' ? ' voor meisjes' : (($activeGender ?? null) === 'male' ? ' voor jongens' : '') }}.
+                @else
+                    Geen namen gevonden voor deze zoekopdracht.
+                @endif
+            </p>
+
+            <div class="mt-10 rounded-[30px] bg-[#F9E3BF] p-6 lg:p-10">
+                @if(($searchResults ?? collect())->isNotEmpty())
+                    @php($columns = $searchResults->chunk(20))
+                    <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-5">
+                        @foreach($columns as $chunk)
+                            <ul class="space-y-2 text-[18px] leading-[35px] text-black">
+                                @foreach($chunk as $item)
+                                    <li>
+                                        <a href="{{ route('names.show', ['nameCategory' => $item->nameCategory, 'name' => $item]) }}">{{ $item->title }}</a>
+                                        @if($item->nameCategory)
+                                            <span class="ml-2 text-[14px] text-[#82858C]">({{ $item->nameCategory->name }})</span>
+                                        @endif
+                                    </li>
+                                @endforeach
+                            </ul>
+                        @endforeach
+                    </div>
+                @else
+                    <p class="text-[18px] leading-[1.8] text-[#353535]">Probeer een kortere zoekterm of kies een categorie uit de filters bovenaan.</p>
+                @endif
+            </div>
+        </section>
+    @endif
+
     <section>
         <div class="flex items-end gap-4">
             <h2 class="text-[34px] font-bold leading-[1.02] text-[#353535] lg:text-[55px] lg:leading-[50px]" style="font-family:Outfit,sans-serif;">Jongensnamen op alfabet</h2>

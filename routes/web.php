@@ -5,6 +5,9 @@ use App\Http\Controllers\NameController;
 use App\Http\Controllers\PageController;
 use Illuminate\Support\Facades\Route;
 
+$languageSlugPattern = '(' . implode('|', array_map(static fn (string $slug) => preg_quote($slug, '/'), array_keys(config('name_languages', [])))) . ')';
+$specialTagPattern = '(' . implode('|', array_map(static fn (string $slug) => preg_quote($slug, '/'), collect(config('name_special_tags', []))->flatMap(static fn (array $tag) => $tag['matches'] ?? [])->unique()->values()->all())) . ')';
+
 Route::get('/', [PageController::class, 'home']);
 
 Route::get('/blog', [BlogController::class, 'index']);
@@ -51,22 +54,31 @@ Route::post('/namen/{nameCategory}/{name}/comments', [NameController::class, 'st
 Route::get('/{nameCategory}', [NameController::class, 'categoryIndex'])
     ->where('nameCategory', '^(?!admin$)[A-Za-z0-9-]+$')
     ->name('names.category');
+Route::get('/{nameCategory}/{segment}/{letter}', [NameController::class, 'resolveCategorySegmentLetter'])
+    ->where('nameCategory', '^(?!admin$)[A-Za-z0-9-]+$')
+    ->where('segment', '[A-Za-z0-9-]+')
+    ->where('letter', '[A-Za-z]')
+    ->name('names.segment.letter.resolve');
+Route::get('/{nameCategory}/{segment}', [NameController::class, 'resolveCategorySegment'])
+    ->where('nameCategory', '^(?!admin$)[A-Za-z0-9-]+$')
+    ->where('segment', '(?![A-Za-z]$)[A-Za-z0-9-]+|[A-Za-z]')
+    ->name('names.segment.resolve');
 Route::get('/{nameCategory}/{tagSlug}', [NameController::class, 'categoryBySpecialTag'])
     ->where('nameCategory', '^(?!admin$)[A-Za-z0-9-]+$')
-    ->where('tagSlug', '(stoere|korte|unieke|ouderwetse|klassieke|bijzondere|betekenis-namen)')
+    ->where('tagSlug', $specialTagPattern)
     ->name('names.category.tag.single');
 Route::get('/{nameCategory}/{tagSlug}/{letter}', [NameController::class, 'categoryBySpecialTagLetter'])
     ->where('nameCategory', '^(?!admin$)[A-Za-z0-9-]+$')
-    ->where('tagSlug', '(stoere|korte|unieke|ouderwetse|klassieke|bijzondere|betekenis-namen)')
+    ->where('tagSlug', $specialTagPattern)
     ->where('letter', '[A-Za-z]')
     ->name('names.category.tag.single.letter');
 Route::get('/{nameCategory}/{languageSlug}', [NameController::class, 'categoryByLanguage'])
     ->where('nameCategory', '^(?!admin$)[A-Za-z0-9-]+$')
-    ->where('languageSlug', '(belgische|friese|franse|italiaanse|spaanse|engelse|afrikaanse|griekse|islamitische)')
+    ->where('languageSlug', $languageSlugPattern)
     ->name('names.category.language');
 Route::get('/{nameCategory}/{languageSlug}/{letter}', [NameController::class, 'categoryByLanguageLetter'])
     ->where('nameCategory', '^(?!admin$)[A-Za-z0-9-]+$')
-    ->where('languageSlug', '(belgische|friese|franse|italiaanse|spaanse|engelse|afrikaanse|griekse|islamitische)')
+    ->where('languageSlug', $languageSlugPattern)
     ->where('letter', '[A-Za-z]')
     ->name('names.category.language.letter');
 Route::get('/{nameCategory}/{genderSlug}', [NameController::class, 'categoryByGender'])

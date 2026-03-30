@@ -1,5 +1,9 @@
 @extends('themes.babies.names.layout')
 
+@php($activeLanguageSlug = $activeLanguageSlug ?? null)
+@php($activeTagSlug = $activeTagSlug ?? null)
+@php($activeLanguageLabel = $activeLanguageLabel ?? null)
+@php($activeTagLabel = $activeTagLabel ?? null)
 @php($archivePrefix = $activeLanguageLabel ?? $activeTagLabel ?? '')
 @php($archiveHeading = trim($archivePrefix . ' ' . $nameCategory->name))
 
